@@ -75,9 +75,3 @@ def decrypt(msg: int, priv_key: tuple, pub_key: tuple = None) -> str:
         decrypted = pow(decrypted, pub_key[1], pub_key[0])
 
     return utils.num_to_str(decrypted, priv_key[0].bit_length())
-
-if __name__ == '__main__':
-    pub_key, priv_key = load_keys('keys.txt', 56)
-    c = encrypt('crypto', pub_key)
-    print(c)
-    print(decrypt(c, priv_key))
