@@ -1,4 +1,4 @@
-import utils
+import PublicKey.utils as utils
 from math import gcd
 
 # Load public and private keys from a file, if possible.
