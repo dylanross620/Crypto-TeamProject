@@ -29,6 +29,9 @@ def load_keys(filename: str, bitsize: int) -> tuple:
         f.close()
         return (pub_key, priv_key)
 
+# Generate keys where n has bitsize bits
+# return in form (public key, private key) where public key is (N, e) and
+#   private key is (N, d)
 def generate_keys(bitsize: int) -> tuple:
     e = 65537
     n = 1
