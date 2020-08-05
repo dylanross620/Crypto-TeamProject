@@ -36,10 +36,10 @@ def generate_keys(bitsize: int) -> tuple:
     # while loop shouldn't be needed here, but doesn't hurt
     while n < 2**(bitsize-1) or n >= 2**bitsize:
         p = e+1
-        while gcd(p-1, e) != 1:
+        while gcd(p-1, e) != 1 or gcd(p, e) != 1: # gcd(p, e) != 1 can factor n
             p = utils.generate_prime(bitsize//2)
         q = p
-        while q == p or gcd(e, q-1) != 1:
+        while q == p or gcd(e, q-1) != 1 or gcd(e, q) != 1: # gcd(q, e) != 1 can factor n
             q = utils.generate_prime(bitsize//2)
 
         phi = (p-1) * (q-1)
@@ -47,7 +47,7 @@ def generate_keys(bitsize: int) -> tuple:
         n = p * q
 
         # ensure d isn't too large or too small (for Wiener's attack)
-        if d >= n or d < (1/3) * n**(1/4):
+        if d >= n or (3*d)**4 < n: # re-wrote Wiener's attack bound to prevent taking root of large number causing overflow
             n = 1 # causes loop to continue
 
     pub_key = (n, e)
