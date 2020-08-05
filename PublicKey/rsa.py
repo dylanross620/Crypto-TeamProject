@@ -46,8 +46,8 @@ def generate_keys(bitsize: int) -> tuple:
         d = pow(e, -1, phi)
         n = p * q
 
-        # ensure d isn't too large (also shouldn't be necessary, but doesn't hurt)
-        if d >= n:
+        # ensure d isn't too large or too small (for Wiener's attack)
+        if d >= n or d < (1/3) * n**(1/4):
             n = 1 # causes loop to continue
 
     pub_key = (n, e)
