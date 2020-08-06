@@ -1,5 +1,5 @@
 import json
-
+from PublicKey import rsa
 class Bank:
     def __init__(self, atmpreflist = []):
         self.usertopass = json.loads(open("local_storage/usertohashpass.txt", "r").read()) #returns dict structured (user:hashpass)
@@ -8,10 +8,10 @@ class Bank:
         atmpreflist = [x.lower() for x in atmpreflist]
         self.common = list(set(self.methods) & set(atmpreflist))
         if len(self.common) == 0:
-            print("no common methods between atm/bank")
+            raise Exception("no common methods between atm/bank")
         else:
             self.common = self.common[0]
-        
+        self.read = rsa.load_keys("bank-" + self.common + ".txt", 128)
     def addhashedpassword(username: str, password: str):
         self.usertopass[username] = password
         open("local_storage/usertohashpass.txt", "w+").write(json.dumps(self.usertopass))
@@ -29,3 +29,4 @@ if __name__ == "__main__":
     for k in testbank.usertopass.keys():
         print("USER TO PASS --> %s: %s" % (k, testbank.usertopass[k]))
     print(testbank.common)
+    print(self.read)
