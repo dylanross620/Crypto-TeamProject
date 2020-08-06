@@ -1,4 +1,5 @@
 import json
+
 class Bank:
     def __init__(self):
         self.usertopass = json.loads(open("local_storage/usertohashpass.txt", "r").read()) #returns dict structured (user:hashpass)
