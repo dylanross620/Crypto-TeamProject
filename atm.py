@@ -12,7 +12,9 @@ class ATM:
             raise Exception("need to have preferences as the user to compare to server...")
         self.prefs = preflist
         self.scheme = None
-        self.keypairs = None
+        self.pubkey = None
+        self.privkey = None
+        self.bankpubkey = None
         # self.bankrandom = None
     def withdraw_money(self):
         pass
@@ -20,14 +22,17 @@ class ATM:
     def deposit_money(self):
         pass
 
-    def key_setup(self):
+    def key_setup(self, bpubkey):
         if self.scheme == None:
             raise Exception("need to assign common scheme in atm!")
+        keypairs = None
         if self.scheme == "rsa":
-            self.keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
+            keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
         else:
-            self.keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
-
+            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
+        self.pubkey = keypairs[0]
+        self.privkey = keypairs[1]
+        self.bankpubkey = bpubkey
 
 if __name__ == "__main__":
     # atmtest = ATM()

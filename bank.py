@@ -15,7 +15,9 @@ class Bank:
         # self.server_random = secrets.token_bytes(4096)
         # self.atmrandom = None
         self.scheme = None
-        self.keypairs = None
+        self.pubkey = None
+        self.privkey = None
+        self.atmpubkey = None
         # print(self.server_random)
     def addhashedpassword(self, username: str, password: str) :
         self.usertopass[username] = hash.sha256(password)
@@ -31,7 +33,7 @@ class Bank:
         # self.atmrandom = atminstance.client_random
         # print(f"Handshake info --> client random recieved in plaintext as {clientrand}")
         print(f"Handshake info --> client supported schemes {atminstance.prefs}")
-        print(f"Handshane info --> starting server hello...")
+        print(f"Handshake info --> starting server hello...")
         atmpreflist = [x.lower() for x in atminstance.prefs]
         common = list(set(self.methods) & set(atmpreflist))
         if len(common) == 0:
@@ -40,11 +42,15 @@ class Bank:
             self.scheme = common[0]
         atminstance.scheme = self.scheme
         print(f"Handshake info --> common encryption scheme set to use {self.scheme}")
+        keypairs = None
         if self.scheme == "rsa":
-            self.keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
+            keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
         else:
-            self.keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",4096)
-        atminstance.key_setup()
+            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",4096)
+        self.pubkey = keypairs[0]
+        self.privkey = keypairs[1]
+        atminstance.key_setup(self.pubkey)
+        self.atmpubkey = atminstance.pubkey
         # print(f"Handshake info --> server random sent in plaintext as {self.server_random}")
         # atminstance.bankrandom = self.server_random
 
