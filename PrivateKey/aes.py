@@ -1,3 +1,5 @@
+import secrets
+
 # Defined constants from FIPS 197
 S_box = [
         '63 7c 77 7b f2 6b 6f c5 30 01 67 2b fe d7 ab 76'.split(' '),
@@ -350,3 +352,15 @@ def decrypt(msg: str, key: str) -> str:
         decrypted[i] = ''.join([chr(int(block[i:i+2], 16)) for i in range(0, len(block), 2)])
     decrypted = ''.join(decrypted)
     return decrypted.rstrip('\x00') # remove padding
+
+def generate_key() -> str:
+    return format(secrets.randbits(32*8), '064x') # generate 32 bits and write them in hex with at least (will be exactly) 64 digits
+
+if __name__ == '__main__':
+    key = generate_key()
+    print(key)
+    print(len(key))
+    msg = 'testing'
+    enc = encrypt(msg, key)
+    print(enc)
+    print(decrypt(enc, key))
