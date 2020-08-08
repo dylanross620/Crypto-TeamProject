@@ -120,6 +120,18 @@ class Bank:
         self.atmpubkey += q4[0]
         self.atmpubkey = eval(self.atmpubkey)
         print("Handshake info --> atm pubkey successully recieved")
+        print("Handshake info --> verifying bank to atm")
+        if clientname not in list(self.usertopass.keys()):
+            raise Exception("Supplied atm username not in bank records")
+        pwhash2 = self.usertopass[clientname]
+        pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
+        if self.scheme == 'rsa':
+            pwhash2 = rsa.encrypt(pwhash2, self.atmpubkey)
+        else:
+            pwhash2 = elgamal.encrypt(pwhash2, self.atmpubkey)
+        self.client.send(str(pwhash2).encode('utf-8'))
+        print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
+
     
 if __name__ == "__main__":
     testbank = Bank()

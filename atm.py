@@ -75,7 +75,18 @@ class ATM:
         self.s.send(str(q4).encode('utf-8'))
         print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
         
-
+        checkpw = self.s.recv(4096).decode('utf-8')
+        if self.scheme == 'rsa':
+            checkpw = rsa.decrypt(int(checkpw), self.privkey)
+        else:
+            checkpw = elgamal.decrypt(eval(checkpw), self.privkey)
+        checkpw = checkpw.split('-')
+        if hash.sha256(checkpw[0]) == checkpw[1] and checkpw[0] == self.pw:
+            self.s.send("good pw check".encode('utf-8'))
+        else:
+            self.s.send("pw check failed or msg tampered with".encode('utf-8'))
+            raise Exception("pw check failed or msg tampered with")
+        
 
     def key_setup(self, bpubkey):
         if self.scheme == None:
@@ -107,7 +118,7 @@ class ATM:
         pass
 
 if __name__ == "__main__":
-    # atmtest = ATM("Alex","alexpassword",["rsa"])
+    atmtest = ATM("Alex","alexpassword",["rsa"])
     # atmtest2 = ATM("Owen","owenpassword",["elgamal"])
-    testatm = ATM("testuser","testpass", ['rsa'])
-    testatm.starthandshake() 
+    # testatm = ATM("Owen","testpass", ['rsa'])
+    atmtest.starthandshake() 
