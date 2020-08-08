@@ -42,9 +42,9 @@ class Bank:
         self.client, self.clientaddr = self.s.accept()
         clienthello = self.client.recv(1024)
         clienthello = clienthello.decode('utf-8').split('-')
-        clientname = clienthello[0]
+        clientname = repr(clienthello[0]).strip("'")
         atmprefs = eval(clienthello[1])
-        print(f"ATM user '{clientname}' has initiated handshake, hello to BANK server!")
+        print("ATM user " + clientname + " has initiated handshake, hello to BANK server!")
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
         if len(common) == 0:
