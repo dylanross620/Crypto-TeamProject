@@ -59,22 +59,14 @@ def generate_keys(bitsize: int) -> tuple:
 
 
 # Encrypt a message using the provided public key.
-# If private key is provided, the message will be signed first, and then encrypted.
 # Assumes msg < N for both N in public key and private key (if provided)
-def encrypt(msg: str, pub_key: tuple, priv_key: tuple = None) -> int:
+def encrypt(msg: str, pub_key: tuple) -> int:
     msg = utils.str_to_num(msg)
-
-    if priv_key is not None and priv_key[0] != pub_key[0]: # checking to see if coincidentally have same key
-        msg = pow(msg, priv_key[1], priv_key[0])
 
     return pow(msg, pub_key[1], pub_key[0])
 
 # Decrypt a message using the provided private key.
-# If public key is provided, it will decrypt and then use public key to remove a signature
-def decrypt(msg: int, priv_key: tuple, pub_key: tuple = None) -> str:
+def decrypt(msg: int, priv_key: tuple) -> str:
     decrypted = pow(msg, priv_key[1], priv_key[0])
-
-    if pub_key is not None and pub_key[0] != priv_key[0]:
-        decrypted = pow(decrypted, pub_key[1], pub_key[0])
 
     return utils.num_to_str(decrypted, priv_key[0].bit_length())
