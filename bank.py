@@ -65,12 +65,14 @@ class Bank:
 
         print(repr("full decryted key+hash: " + aestmp)) #testing ---------- delete later
 
-        if hash.sha256(reckey) == rechash: #MAC is valid, we can use this key
+        if hash.sha256(reckey) == rechash: #HMAC is valid, we can use this key
             self.aeskey = reckey
         else:
             raise Exception("handshake exception --> AES KEY TAMPERED WITH")
-
         
+        print("Handshake info --> AES secret key sucessfully shared")
+
+
 
         
         # print(f"Handshake info --> server random sent in plaintext as {self.server_random}")
