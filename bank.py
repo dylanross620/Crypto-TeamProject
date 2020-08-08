@@ -131,8 +131,20 @@ class Bank:
             pwhash2 = elgamal.encrypt(pwhash2, self.atmpubkey)
         self.client.send(str(pwhash2).encode('utf-8'))
         print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
-
-    
+        print("Handshake info --> starting AES shared key transfer")
+        tmpaes = self.client.recv(4096).decode('utf-8')
+        if self.scheme == 'rsa':
+            tmpaes = rsa.decrypt(int(tmpaes), self.privkey)
+        else:
+            tmpaes = elgamal.decrypt(eval(tmpaes), self.privkey)
+        tmpaes = tmpaes.split('-')
+        if hash.sha256(tmpaes[0]) == tmpaes[1]:
+            print("Handshake info --> AES key recieved")
+            self.client.send("good AES key".encode('utf-8'))
+            self.aeskey = tmpaes[0]
+        else:
+            self.client.send("AES key tampered with".encode('utf-8'))
+            raise Exception("AES key tampered with")
 if __name__ == "__main__":
     testbank = Bank()
     # testatm = ATM("testuser","testpass", ['rsa'])

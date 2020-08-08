@@ -87,6 +87,13 @@ class ATM:
             self.s.send("pw check failed or msg tampered with".encode('utf-8'))
             raise Exception("pw check failed or msg tampered with")
         
+        aestmp = self.aeskey + '-' + hash.sha256(self.aeskey)
+        if self.scheme == 'rsa':
+            aestmp = rsa.encrypt(aestmp, self.bankpubkey)
+        else:
+            aestmp = elgamal.encrypt(aestmp, self.bankpubkey)
+        self.s.send(str(aestmp).encode('utf-8'))
+        print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
 
     def key_setup(self, bpubkey):
         if self.scheme == None:
