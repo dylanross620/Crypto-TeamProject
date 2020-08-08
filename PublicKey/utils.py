@@ -29,4 +29,4 @@ def str_to_num(msg: str) -> int:
 # size is how long the resulting string should be, in bytes
 # throws error is size is too small
 def num_to_str(msg: int, size: int) -> str:
-    return msg.to_bytes(length=size, byteorder='big').decode('utf-8')
+    return msg.to_bytes(length=size, byteorder='big').decode('utf-8').strip('\x00')
