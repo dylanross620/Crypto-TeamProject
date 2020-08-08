@@ -8,7 +8,9 @@ class ATM:
     def __init__(self, username, password, preflist = []):
         self.user = username
         self.pw  = hash.sha256(password)
-        self.aeskey = str(secrets.token_bytes(256))
+        self.aeskey = str(secrets.token_bytes(32)) #32 bytes = 256 bits for AES
+        print("atm aes secret len: " + str(len(self.aeskey))) #testing ---------- delete later
+        print("atm aes secret: " + self.aeskey) #testing ---------- delete later
         if len(preflist) == 0:
             raise Exception("need to have preferences as the user to compare to server...")
         self.prefs = preflist
@@ -42,11 +44,12 @@ class ATM:
 
         return ekey #this is being sent across the network, could intercept here before bank recieves...
 
-    def send_user():
-        return self.user
+    def send_user(): #need to hash, append to hash end of message, encrypt all, then send and check validity of hash in bank.py
+        pass
     
-    def send_pass():
-        return self.pw
+    def send_pass(): #need to hash, append to hash end of message, encrypt all, then send and check validity of hash in bank.py
+        pass
+
 if __name__ == "__main__":
     atmtest = ATM("Alex","alexpassword",["rsa"])
     atmtest2 = ATM("Owen","owenpassword",["elgamal"])

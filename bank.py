@@ -56,12 +56,21 @@ class Bank:
             aestmp = rsa.decrypt(aestmp,self.privkey)
         else:
             aestmp = elgamal.decrypt(aestmp,self.privkey)
-        reckey = aestmp[0:(len(aestmp) - 256)]
-        rechash = aestmp[-256:]
-        if hash.sha256(reckey) == rechash:
+        #WHY DOES AESTEP HAVE BUNCH OF \x00 BEFORE IT? DOES DOING .strip('\x00') WORK FOR ALL INSTANCES OF THIS PROBLEM???
+        keylen = len(aestmp) - 64
+        reckey = aestmp[0:keylen]
+        rechash = aestmp[-64:]
+
+        reckey = reckey.strip('\x00') #will this break on blackhat team computer? why do the \x00's occur?
+
+        print(repr("full decryted key+hash: " + aestmp)) #testing ---------- delete later
+
+        if hash.sha256(reckey) == rechash: #MAC is valid, we can use this key
             self.aeskey = reckey
         else:
             raise Exception("handshake exception --> AES KEY TAMPERED WITH")
+
+        
 
         
         # print(f"Handshake info --> server random sent in plaintext as {self.server_random}")
