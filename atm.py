@@ -2,12 +2,13 @@ import json
 import secrets
 from PublicKey import rsa
 from PublicKey import elgamal
+import hash
+
 class ATM:
     def __init__(self, username, password, preflist = []):
         self.user = username
-        self.pw  = password
-        # self.client_random = secrets.token_bytes(4096)
-        # self.premaster = secrets.token_bytes(4096)
+        self.pw  = hash.sha256(password)
+        self.aeskey = str(secrets.token_bytes(256))
         if len(preflist) == 0:
             raise Exception("need to have preferences as the user to compare to server...")
         self.prefs = preflist
@@ -15,7 +16,7 @@ class ATM:
         self.pubkey = None
         self.privkey = None
         self.bankpubkey = None
-        # self.bankrandom = None
+
     def withdraw_money(self):
         pass
 
@@ -33,11 +34,19 @@ class ATM:
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         self.bankpubkey = bpubkey
+        ekey = None
+        if self.scheme == "rsa":
+            ekey = rsa.encrypt(self.aeskey + hash.sha256(self.aeskey),self.bankpubkey)
+        else:
+            ekey = elgamal.encrypt(self.aeskey + hash.sha256(self.aeskey), self.bankpubkey)
 
+        return ekey #this is being sent across the network, could intercept here before bank recieves...
+
+    def send_user():
+        return self.user
+    
+    def send_pass():
+        return self.pw
 if __name__ == "__main__":
-    # atmtest = ATM()
-    g = 6497955158
-    m = 1
-    n = 126869
-    r = 35145
-    print((g * (r**n) % (n**2)))
+    atmtest = ATM("Alex","alexpassword",["rsa"])
+    atmtest2 = ATM("Owen","owenpassword",["elgamal"])

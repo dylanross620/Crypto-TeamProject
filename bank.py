@@ -18,6 +18,7 @@ class Bank:
         self.pubkey = None
         self.privkey = None
         self.atmpubkey = None
+        self.aeskey = None
         # print(self.server_random)
     def addhashedpassword(self, username: str, password: str) :
         self.usertopass[username] = hash.sha256(password)
@@ -49,8 +50,20 @@ class Bank:
             keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",4096)
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
-        atminstance.key_setup(self.pubkey)
+        aestmp = atminstance.key_setup(self.pubkey)
         self.atmpubkey = atminstance.pubkey
+        if self.scheme == "rsa":
+            aestmp = rsa.decrypt(aestmp,self.privkey)
+        else:
+            aestmp = elgamal.decrypt(aestmp,self.privkey)
+        reckey = aestmp[0:(len(aestmp) - 256)]
+        rechash = aestmp[-256:]
+        if hash.sha256(reckey) == rechash:
+            self.aeskey = reckey
+        else:
+            raise Exception("handshake exception --> AES KEY TAMPERED WITH")
+
+        
         # print(f"Handshake info --> server random sent in plaintext as {self.server_random}")
         # atminstance.bankrandom = self.server_random
 
