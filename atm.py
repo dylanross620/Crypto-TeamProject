@@ -23,7 +23,6 @@ class ATM:
         self.bankpubkey = None
         self.s = socket.socket()
         self.s.connect(('127.0.0.1', 5432))
-        # self.s.settimeout(1)
 
     def withdraw_money(self):
         pass
@@ -32,19 +31,50 @@ class ATM:
         pass
 
     def starthandshake(self):
-        # self.s.send()
-        # msg = self.s.recv(1024)
-        # print(msg)
-        # self.s.close()
         self.s.send((self.user + '-' + str(self.prefs)).encode('utf-8'))
-        bankhello = self.s.recv(1024)
-
-        bankhello = bankhello.decode('utf-8').split('-')
-        self.scheme = bankhello[0]
-        self.bankpubkey = eval(bankhello[1])
-        print(self.bankpubkey)
+        bankhello = self.s.recv(4096)
+        self.scheme = bankhello.decode('utf-8')
+        if self.scheme == "rsa":
+            keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
+            bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
+            self.bankpubkey = bkeypairs[0]
+        else:
+            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
+            bkeypairs = rsa.load_keys("local_storage/bank-elgamal.txt",4096)
+            self.bankpubkey = bkeypairs[0]
+        self.pubkey = keypairs[0]
+        self.privkey = keypairs[1]
+        print("Handshake info --> sending over atm pubkey...")
+        pubkeystr = str(self.pubkey)
+        pkeylen = len(pubkeystr) // 4
+        print(pkeylen)
+        q1 = pubkeystr[0:pkeylen]
+        q2 = pubkeystr[pkeylen:(pkeylen*2)]
+        q3 = pubkeystr[(pkeylen*2):(pkeylen*3)]
+        q4 = pubkeystr[(pkeylen*3):]
+        q1 = q1 + '-' + hash.sha256(q1)
+        q2 = q2 + '-' + hash.sha256(q2)
+        q3 = q3 + '-' + hash.sha256(q3)
+        q4 = q4 + '-' + hash.sha256(q4)
+        if self.scheme == 'rsa':
+            q1 = rsa.encrypt(q1,self.bankpubkey)
+            q2 = rsa.encrypt(q2,self.bankpubkey)
+            q3 = rsa.encrypt(q3,self.bankpubkey)
+            q4 = rsa.encrypt(q4,self.bankpubkey)
+        else:
+            q1 = elgamal.encrypt(q1,self.bankpubkey)
+            q2 = elgamal.encrypt(q2,self.bankpubkey)
+            q3 = elgamal.encrypt(q3,self.bankpubkey)
+            q4 = elgamal.encrypt(q4,self.bankpubkey)
+        self.s.send(str(q1).encode('utf-8'))
+        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q2).encode('utf-8'))
+        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q3).encode('utf-8'))
+        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q4).encode('utf-8'))
+        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
         
-        return True
 
 
     def key_setup(self, bpubkey):
@@ -53,8 +83,12 @@ class ATM:
         keypairs = None
         if self.scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
+            bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
+            self.bankpubkey = bkeypairs[0]
         else:
             keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
+            bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
+            self.bankpubkey = bkeypairs[0]
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         self.bankpubkey = bpubkey
@@ -73,5 +107,7 @@ class ATM:
         pass
 
 if __name__ == "__main__":
-    atmtest = ATM("Alex","alexpassword",["rsa"])
-    atmtest2 = ATM("Owen","owenpassword",["elgamal"])
+    # atmtest = ATM("Alex","alexpassword",["rsa"])
+    # atmtest2 = ATM("Owen","owenpassword",["elgamal"])
+    testatm = ATM("testuser","testpass", ['rsa'])
+    testatm.starthandshake() 
