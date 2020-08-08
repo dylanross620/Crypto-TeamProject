@@ -1,9 +1,14 @@
 import json
+import hash
+import socket
+import select
+import threading
 from PublicKey import rsa
 from PublicKey import elgamal
-import hash
+from PrivateKey import aes
+
 from atm import ATM
-import secrets
+
 
 class Bank:
     def __init__(self):
@@ -19,7 +24,12 @@ class Bank:
         self.privkey = None
         self.atmpubkey = None
         self.aeskey = None
-        # print(self.server_random)
+
+        self.s = socket.socket()
+        self.s.bind(('127.0.0.1',5432))
+        self.s.listen(5)
+        self.client = None
+        self.clientaddr = None
     def addhashedpassword(self, username: str, password: str) :
         self.usertopass[username] = hash.sha256(password)
         open("local_storage/usertohashpass.txt", "w+").write(json.dumps(self.usertopass))
@@ -28,20 +38,19 @@ class Bank:
         self.usertomoney[username] = amount
         open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
 
-    def starthandshake(self, atminstance): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
-        print(f"ATM user '{atminstance.user}' has initiated handshake, hello to BANK server!")
-        #we now take in the client random byte string, client supported encryptions, and 
-        # self.atmrandom = atminstance.client_random
-        # print(f"Handshake info --> client random recieved in plaintext as {clientrand}")
-        print(f"Handshake info --> client supported schemes {atminstance.prefs}")
-        print(f"Handshake info --> starting server hello...")
-        atmpreflist = [x.lower() for x in atminstance.prefs]
-        common = list(set(self.methods) & set(atmpreflist))
+    def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
+        self.client, self.clientaddr = self.s.accept()
+        clienthello = self.client.recv(1024)
+        clienthello = clienthello.decode('utf-8').split('-')
+        clientname = clienthello[0]
+        atmprefs = eval(clienthello[1])
+        print(f"ATM user '{clientname}' has initiated handshake, hello to BANK server!")
+        atmprefs = [x.lower() for x in atmprefs]
+        common = list(set(self.methods) & set(atmprefs))
         if len(common) == 0:
             raise Exception("no common methods between atm/bank")
         else:
             self.scheme = common[0]
-        atminstance.scheme = self.scheme
         print(f"Handshake info --> common encryption scheme set to use {self.scheme}")
         keypairs = None
         if self.scheme == "rsa":
@@ -50,39 +59,102 @@ class Bank:
             keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",4096)
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
-        aestmp = atminstance.key_setup(self.pubkey)
-        self.atmpubkey = atminstance.pubkey
-        if self.scheme == "rsa":
-            aestmp = rsa.decrypt(aestmp,self.privkey)
+        self.client.send(self.scheme.encode('utf-8'))
+        #we need to recieve atm pubkey in 2 parts now
+        print("Handshake info --> recieving atm pubkey...")
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        if self.scheme == 'rsa':
+            q1 = rsa.decrypt(int(q1), self.privkey)
         else:
-            aestmp = elgamal.decrypt(aestmp,self.privkey)
-        #WHY DOES AESTEP HAVE BUNCH OF \x00 BEFORE IT? DOES DOING .strip('\x00') WORK FOR ALL INSTANCES OF THIS PROBLEM???
-        keylen = len(aestmp) - 64
-        reckey = aestmp[0:keylen]
-        rechash = aestmp[-64:]
-
-        reckey = reckey.strip('\x00') #will this break on blackhat team computer? why do the \x00's occur?
-
-        print(repr("full decryted key+hash: " + aestmp)) #testing ---------- delete later
-
-        if hash.sha256(reckey) == rechash: #HMAC is valid, we can use this key
-            self.aeskey = reckey
+            q1 = elgamal.decrypt(eval(q1), self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good first quarter recieved".encode('utf-8'))
         else:
-            raise Exception("handshake exception --> AES KEY TAMPERED WITH")
+            self.client.send("first quarter tampered".encode('utf-8'))
+            raise Exception("first quarter tampered")
+
+        q2 = self.client.recv(4096)
+        q2 = q2.decode('utf-8')
+        if self.scheme == 'rsa':
+            q2 = rsa.decrypt(int(q2), self.privkey)
+        else:
+            q2 = elgamal.decrypt(eval(q2), self.privkey)
+        q2 = q2.split('-')
+        if hash.sha256(q2[0]) == q2[1]:
+            self.client.send("good second quarter recieved".encode('utf-8'))
+        else:
+            self.client.send("second quarter tampered".encode('utf-8'))
+            raise Exception("second quarter tampered")
+
+        q3 = self.client.recv(4096)
+        q3 = q3.decode('utf-8')
+        if self.scheme == 'rsa':
+            q3 = rsa.decrypt(int(q3), self.privkey)
+        else:
+            q3 = elgamal.decrypt(eval(q3), self.privkey)
+        q3 = q3.split('-')
+        if hash.sha256(q3[0]) == q3[1]:
+            self.client.send("good third quarter recieved".encode('utf-8'))
+        else:
+            self.client.send("third quarter tampered".encode('utf-8'))
+            raise Exception("third quarter tampered")
+
+        q4 = self.client.recv(4096)
+        q4 = q4.decode('utf-8')
+        if self.scheme == 'rsa':
+            q4 = rsa.decrypt(int(q4), self.privkey)
+        else:
+            q4 = elgamal.decrypt(eval(q4), self.privkey)
+        q4 = q4.split('-')
+        if hash.sha256(q4[0]) == q4[1]:
+            self.client.send("good fourth quarter recieved".encode('utf-8'))
+        else:
+            self.client.send("fourth quarter tampered".encode('utf-8'))
+            raise Exception("fourth quarter tampered")
         
-        print("Handshake info --> AES secret key sucessfully shared")
-
-
-
-        
-        # print(f"Handshake info --> server random sent in plaintext as {self.server_random}")
-        # atminstance.bankrandom = self.server_random
-
-
+        self.atmpubkey = q1[0]
+        self.atmpubkey += q2[0]
+        self.atmpubkey += q3[0]
+        self.atmpubkey += q4[0]
+        self.atmpubkey = eval(self.atmpubkey)
+        print("Handshake info --> atm pubkey successully recieved")
+        print("Handshake info --> verifying bank to atm")
+        if clientname not in list(self.usertopass.keys()):
+            raise Exception("Supplied atm username not in bank records")
+        pwhash2 = self.usertopass[clientname]
+        pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
+        if self.scheme == 'rsa':
+            pwhash2 = rsa.encrypt(pwhash2, self.atmpubkey)
+        else:
+            pwhash2 = elgamal.encrypt(pwhash2, self.atmpubkey)
+        self.client.send(str(pwhash2).encode('utf-8'))
+        print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
+        print("Handshake info --> starting AES shared key transfer")
+        tmpaes = self.client.recv(4096).decode('utf-8')
+        if self.scheme == 'rsa':
+            tmpaes = rsa.decrypt(int(tmpaes), self.privkey)
+        else:
+            tmpaes = elgamal.decrypt(eval(tmpaes), self.privkey)
+        tmpaes = tmpaes.split('-')
+        if hash.sha256(tmpaes[0]) == tmpaes[1]:
+            print("Handshake info --> AES key recieved")
+            self.client.send("good AES key".encode('utf-8'))
+            self.aeskey = tmpaes[0]
+        else:
+            self.client.send("AES key tampered with".encode('utf-8'))
+            raise Exception("AES key tampered with")
 if __name__ == "__main__":
     testbank = Bank()
-    testatm = ATM("testuser","testpass", ['rsa'])
-    testbank.starthandshake(testatm)
+    # testatm = ATM("testuser","testpass", ['rsa'])
+    # testatm.starthandshake() 
+    testbank.starthandshake()
+    # testatm.starthandshake()
     print(testbank.usertopass)
     print(testbank.usertomoney)
+    # test1 = threading.Thread(name='test1', target = testatm.starthandshake)
+    # test2 = threading.Thread(name='test2', target = testbank.starthandshake)
+    # test1.start()
+    # test2.start()
     # print(testbank.keypairs)
