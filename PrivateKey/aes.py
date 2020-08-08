@@ -355,12 +355,3 @@ def decrypt(msg: str, key: str) -> str:
 
 def generate_key() -> str:
     return format(secrets.randbits(32*8), '064x') # generate 32 bits and write them in hex with at least (will be exactly) 64 digits
-
-if __name__ == '__main__':
-    key = generate_key()
-    print(key)
-    print(len(key))
-    msg = 'testing'
-    enc = encrypt(msg, key)
-    print(enc)
-    print(decrypt(enc, key))
