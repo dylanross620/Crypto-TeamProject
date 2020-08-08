@@ -1,9 +1,12 @@
 import json
+import hash
+import socket
 from PublicKey import rsa
 from PublicKey import elgamal
-import hash
+from PrivateKey import aes
+
 from atm import ATM
-import secrets
+
 
 class Bank:
     def __init__(self):
@@ -19,6 +22,17 @@ class Bank:
         self.privkey = None
         self.atmpubkey = None
         self.aeskey = None
+        # self.s = socket.socket(socket.AFINET,socket.SOCK_STREAM)
+        self.s = socket.socket()
+        self.s.bind(('127.0.0.1',5432))
+        self.s.listen(5)
+        
+        # self.s = socket.socket()
+        # self.s.connect(('127.0.0.1', 5432))
+
+        # self.s.settimeout(1)
+        self.client = None
+        self.clientaddr = None
         # print(self.server_random)
     def addhashedpassword(self, username: str, password: str) :
         self.usertopass[username] = hash.sha256(password)
@@ -28,20 +42,23 @@ class Bank:
         self.usertomoney[username] = amount
         open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
 
-    def starthandshake(self, atminstance): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
-        print(f"ATM user '{atminstance.user}' has initiated handshake, hello to BANK server!")
-        #we now take in the client random byte string, client supported encryptions, and 
-        # self.atmrandom = atminstance.client_random
-        # print(f"Handshake info --> client random recieved in plaintext as {clientrand}")
-        print(f"Handshake info --> client supported schemes {atminstance.prefs}")
-        print(f"Handshake info --> starting server hello...")
-        atmpreflist = [x.lower() for x in atminstance.prefs]
-        common = list(set(self.methods) & set(atmpreflist))
+    def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
+        self.client, self.clientaddr = self.s.accept()
+        self.client.send("working FROM BANK".encode('utf-8'))
+        # print("got connection from " + self.clientaddr[0])
+        # self.client.close()
+        # clienthello = self.s.recv(1024)
+        clienthello = self.client.recv(1024)
+        clienthello = clienthello.decode('utf-8').split('-')
+        clientname = clienthello[0]
+        atmprefs = eval(clienthello[1])
+        print(f"ATM user '{clientname}' has initiated handshake, hello to BANK server!")
+        atmprefs = [x.lower() for x in atmprefs]
+        common = list(set(self.methods) & set(atmprefs))
         if len(common) == 0:
             raise Exception("no common methods between atm/bank")
         else:
             self.scheme = common[0]
-        atminstance.scheme = self.scheme
         print(f"Handshake info --> common encryption scheme set to use {self.scheme}")
         keypairs = None
         if self.scheme == "rsa":
@@ -50,39 +67,17 @@ class Bank:
             keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",4096)
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
-        aestmp = atminstance.key_setup(self.pubkey)
-        self.atmpubkey = atminstance.pubkey
-        if self.scheme == "rsa":
-            aestmp = rsa.decrypt(aestmp,self.privkey)
-        else:
-            aestmp = elgamal.decrypt(aestmp,self.privkey)
-        #WHY DOES AESTEP HAVE BUNCH OF \x00 BEFORE IT? DOES DOING .strip('\x00') WORK FOR ALL INSTANCES OF THIS PROBLEM???
-        keylen = len(aestmp) - 64
-        reckey = aestmp[0:keylen]
-        rechash = aestmp[-64:]
-
-        reckey = reckey.strip('\x00') #will this break on blackhat team computer? why do the \x00's occur?
-
-        print(repr("full decryted key+hash: " + aestmp)) #testing ---------- delete later
-
-        if hash.sha256(reckey) == rechash: #HMAC is valid, we can use this key
-            self.aeskey = reckey
-        else:
-            raise Exception("handshake exception --> AES KEY TAMPERED WITH")
-        
-        print("Handshake info --> AES secret key sucessfully shared")
-
-
-
-        
-        # print(f"Handshake info --> server random sent in plaintext as {self.server_random}")
-        # atminstance.bankrandom = self.server_random
-
+        print('here')
+        # self.s.send((self.scheme + "-" +str(self.pubkey)).encode('utf-8'))
+        self.client.send((self.scheme + "-" +str(self.pubkey)).encode('utf-8'))
+        return True
 
 if __name__ == "__main__":
     testbank = Bank()
     testatm = ATM("testuser","testpass", ['rsa'])
-    testbank.starthandshake(testatm)
+    testatm.starthandshake() 
+    testbank.starthandshake()
+    # testatm.starthandshake()
     print(testbank.usertopass)
     print(testbank.usertomoney)
     # print(testbank.keypairs)
