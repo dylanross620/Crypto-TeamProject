@@ -18,6 +18,7 @@ class Bank:
         self.privkey = None
         self.atmpubkey = None
         self.aeskey = None
+        self.counter = 0
 
         self.s = socket.socket()
         self.s.bind(('127.0.0.1',5432))
@@ -33,6 +34,11 @@ class Bank:
         self.usertomoney[username] = amount
         open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
 
+    def countercheck(self, msg):
+        if(int(msg[0]) <= self.counter):
+            raise Exception("counter check failed or msg tampered with")
+        self.counter = int(msg[0]) + 1\
+
     def withdraw(self,usr, amt): 
         #we include username/pw in the msg so we can auth and not just use self.clientname blindly (incase blackhat sends packets)
         #msg format --> [username-pw-withdraw/deposit-money]-msghash
@@ -40,11 +46,13 @@ class Bank:
         sendback = usr + "-"
         if int(self.usertomoney[usr]) - amt < 0:
             sendback += self.usertomoney[usr] + '-' + "cannot overdraw this account"
+            sendback = str(self.counter) + '-' + sendback
             sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
         else:
             self.usertomoney[usr] = str(int(self.usertomoney[usr]) - amt)
             sendback += self.usertomoney[usr] + '-' + "withdraw successful"
+            sendback = str(self.counter) + '-' + sendback
             sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
 
@@ -52,6 +60,7 @@ class Bank:
             sendback = usr + "-"
             self.usertomoney[usr] = str(int(self.usertomoney[usr]) + amt)
             sendback += self.usertomoney[usr] + '-' + "deposit successful"
+            sendback = str(self.counter) + '-' + sendback
             sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
             
@@ -62,22 +71,27 @@ class Bank:
                 break
             cmd = aes.decrypt(cmd,self.aeskey)
             cmd = cmd.split('-')
+            self.countercheck(cmd)
             chkhash = cmd[-1]
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
+            cmd = cmd[1:]
             if hash.sha256(againsthash) != chkhash:
                 sendback = "notverifieduser-0-msg integrity compromised"
+                sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[0] not in list(self.usertopass.keys()):
                 sendback = "notverifieduser-0-username not known in bank"
+                sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[1] != self.usertopass[cmd[0]]:
                 sendback = cmd[0] + "-"
                 sendback += self.usertomoney[usr] + '-' + "password not matching in bank"
+                sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
@@ -88,6 +102,7 @@ class Bank:
             else:
                 sendback = cmd[0] + "-"
                 sendback += self.usertomoney[usr] + '-' + "invalid command"
+                sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
             
