@@ -122,134 +122,26 @@ class Bank:
         self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]))
 
     def rec_atmpub_gamal(self):
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good first eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("first eighth tampered".encode('utf-8'))
-            raise Exception("first eighth tampered")
+        self.atmpubkey = ""
+        for z in range(0,18):
+            q1 = self.client.recv(4096)
+            q1 = q1.decode('utf-8')
+            q1tmp = q1.strip("(").strip(")").split(",")
+            q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+            q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+            q1 = elgamal.decrypt(q1tmp, self.privkey)
+            q1 = q1.split('-')
+            if hash.sha256(q1[0]) == q1[1]:
+                self.client.send(f"good block {z}/17 recieved".encode('utf-8'))
+            else:
+                self.client.send(f"{z}/17 tampered".encode('utf-8'))
+                raise Exception(f"{z}/17 tampered")
 
-        self.atmpubkey = q1[0]
+            self.atmpubkey += q1[0]
 
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good second eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("second eighth tampered".encode('utf-8'))
-            raise Exception("second eighth tampered")
-
-        self.atmpubkey += q1[0]
-
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good third eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("third eighth tampered".encode('utf-8'))
-            raise Exception("third eighth tampered")
-
-        self.atmpubkey += q1[0]
-
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        print(len(q1))
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good fourth eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("fourth eighth tampered".encode('utf-8'))
-            raise Exception("fourth eighth tampered")
-
-        self.atmpubkey += q1[0]
-
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        print(len(q1))
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good fifth eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("fifth eighth tampered".encode('utf-8'))
-            raise Exception("fifth eighth tampered")
-
-        self.atmpubkey += q1[0]
-
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        print(len(q1))
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good sixth eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("sixth eighth tampered".encode('utf-8'))
-            raise Exception("sixth eighth tampered")
-
-        self.atmpubkey += q1[0]
-
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        print(len(q1))
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good seventh eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("seventh eighth tampered".encode('utf-8'))
-            raise Exception("seventh eighth tampered")
-
-        self.atmpubkey += q1[0]
-
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        print(len(q1))
-        q1tmp = q1.strip("(").strip(")").split(",")
-        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-        q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
-            self.client.send("good eighth eighth recieved".encode('utf-8'))
-        else:
-            self.client.send("eighth eighth tampered".encode('utf-8'))
-            raise Exception("eighth eighth tampered")
-
-        self.atmpubkey += q1[0]
-        
         apubtmp = self.atmpubkey.strip("(").strip(")").split(",")
         apubtmp = [x.strip() for x in apubtmp] #take away tuple space or wierd stuff
-        self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]))
+        self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]), int(apubtmp[2]))
 
     def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
         self.client, self.clientaddr = self.s.accept()
@@ -287,30 +179,66 @@ class Bank:
         if clientname not in list(self.usertopass.keys()):
             raise Exception("Supplied atm username not in bank records")
         pwhash2 = self.usertopass[clientname]
-        pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
         if self.scheme == 'rsa':
+            pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
             pwhash2 = rsa.encrypt(pwhash2, self.atmpubkey)
+            self.client.send(str(pwhash2).encode('utf-8'))
+            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
         else:
-            pwhash2 = elgamal.encrypt(pwhash2, self.atmpubkey)
-        self.client.send(str(pwhash2).encode('utf-8'))
-        print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
+            pw1of2 = pwhash2[:len(pwhash2)//2]
+            pw2of2 = pwhash2[len(pwhash2)//2:]
+            pw1of2 = pw1of2 + '-' + hash.sha256(pw1of2)
+            pw2of2 = pw2of2 + '-' + hash.sha256(pw2of2)
+            pw1of2 = elgamal.encrypt(pw1of2, self.atmpubkey)
+            pw2of2 = elgamal.encrypt(pw2of2, self.atmpubkey)
+            self.client.send(str(pw1of2).encode('utf-8'))
+            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}") #atm prints good block 1/2 and 2/2
+            self.client.send(str(pw2of2).encode('utf-8'))
+            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}") #atm prints good block 1/2 and 2/2
+            self.client.send("breaker".encode('utf-8')) #need blocking call for pretty print
+            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
+
         print("Handshake info --> starting AES shared key transfer")
-        tmpaes = self.client.recv(4096).decode('utf-8')
         if self.scheme == 'rsa':
+            tmpaes = self.client.recv(4096).decode('utf-8')
             tmpaes = rsa.decrypt(int(tmpaes), self.privkey)
+            tmpaes = tmpaes.split('-')
+            if hash.sha256(tmpaes[0]) == tmpaes[1]:
+                print("Handshake info --> AES key recieved")
+                self.client.send("good AES key".encode('utf-8'))
+                self.aeskey = tmpaes[0]
+            else:
+                self.client.send("AES key tampered with".encode('utf-8'))
+                raise Exception("AES key tampered with")
         else:
-            atmpaes = tmpaes.strip("(").strip(")").split(",")
-            atmpaes = [x.strip() for x in atmpaes] #take away tuple space or wierd stuff
-            atmpaes = (int(atmpaes[0]), int(atmpaes[1]))
-            tmpaes = elgamal.decrypt(atmpaes, self.privkey)
-        tmpaes = tmpaes.split('-')
-        if hash.sha256(tmpaes[0]) == tmpaes[1]:
-            print("Handshake info --> AES key recieved")
-            self.client.send("good AES key".encode('utf-8'))
-            self.aeskey = tmpaes[0]
-        else:
-            self.client.send("AES key tampered with".encode('utf-8'))
-            raise Exception("AES key tampered with")
+            self.aeskey = ""
+            tmpaes1of2 = self.client.recv(4096).decode('utf-8').strip("(").strip(")").split(",")
+            tmpaes1of2 = [x.strip() for x in tmpaes1of2]
+            tmpaes1of2 = (int(tmpaes1of2[0]), int(tmpaes1of2[1])) 
+            tmpaes1of2 = elgamal.decrypt(tmpaes1of2, self.privkey)
+            tmpaes1of2 = tmpaes1of2.split('-')
+            if hash.sha256(tmpaes1of2[0]) == tmpaes1of2[1]:
+                print("Handshake info --> AES key block 1/2 recieved")
+                self.client.send("good block".encode('utf-8'))
+                self.aeskey += tmpaes1of2[0]
+            else:
+                self.client.send("bad block".encode('utf-8'))
+                raise Exception("AES key tampered with")
+
+            tmpaes1of2 = self.client.recv(4096).decode('utf-8').strip("(").strip(")").split(",")
+            tmpaes1of2 = [x.strip() for x in tmpaes1of2]
+            tmpaes1of2 = (int(tmpaes1of2[0]), int(tmpaes1of2[1])) 
+            tmpaes1of2 = elgamal.decrypt(tmpaes1of2, self.privkey)
+            tmpaes1of2 = tmpaes1of2.split('-')
+            if hash.sha256(tmpaes1of2[0]) == tmpaes1of2[1]:
+                print("Handshake info --> AES key block 2/2 recieved")
+                self.client.send("good block".encode('utf-8'))
+                self.aeskey += tmpaes1of2[0]
+            else:
+                self.client.send("bad block".encode('utf-8'))
+                raise Exception("AES key tampered with")
+
+
         print("Handshake info --> Bank ready to go!")
 
 if __name__ == "__main__":
