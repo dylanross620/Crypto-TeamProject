@@ -7,18 +7,12 @@ from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
 
-from atm import ATM
-
-
 class Bank:
     def __init__(self):
         self.usertopass = json.loads(open("local_storage/usertohashpass.txt", "r").read()) #returns dict structured (user:hashpass)
         self.usertomoney = json.loads(open("local_storage/usertomoney.txt", "r").read()) #returns dict structured (user:plaintext_money)
         self.methods = ['rsa', 'elgamal'] #in order of preference
         print("Public key methods in use by bank --> ", self.methods)
-        # self.read = rsa.load_keys("local_storage/bank-" + self.common + ".txt", 128)
-        # self.server_random = secrets.token_bytes(4096)
-        # self.atmrandom = None
         self.scheme = None
         self.pubkey = None
         self.privkey = None

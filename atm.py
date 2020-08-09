@@ -5,15 +5,11 @@ import ast
 from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
-import time
 class ATM:
     def __init__(self, username, password, preflist = []):
         self.user = username
         self.pw  = hash.sha256(password)
         self.aeskey = aes.generate_key()
-        # self.aeskey = str(secrets.token_bytes(32)) #32 bytes = 256 bits for AES
-        # print("atm aes secret len: " + str(len(self.aeskey))) #testing ---------- delete later
-        # print("atm aes secret: " + self.aeskey) #testing ---------- delete later
         if len(preflist) == 0:
             raise Exception("need to have preferences as the user to compare to server...")
         self.prefs = preflist
@@ -24,16 +20,10 @@ class ATM:
         self.s = socket.socket()
         self.s.connect(('127.0.0.1', 5432))
 
-    def withdraw_money(self):
-        pass
-
-    def deposit_money(self):
-        pass
-
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         print("ATM")
         print("Example withdraw: 'withdraw [positive_int]'")
-        print("Example deposit: 'despost [positive_int]")
+        print("Example deposit: 'desposit [positive_int]'")
         print("To close ATM, type q")
         print("---------------------------------------------------")
         while True:
@@ -197,10 +187,6 @@ class ATM:
         aestmp = rsa.encrypt(aestmp, self.bankpubkey)
         self.s.send(str(aestmp).encode('utf-8'))
         print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
-
-    def open_messaging(): #aes to encrypt user input and parse to pass to approprriate bank function
-        #ex usage: withdraw 1000, deposit 4000 (check vals to make sure its not negative/0 here)
-        pass
 
 if __name__ == "__main__":
     # atmtest = ATM("Alex","alexpassword",["rsa"])
