@@ -30,6 +30,7 @@ class ATM:
         print("ATM")
         print("Example withdraw: 'withdraw [positive_int]'")
         print("Example deposit: 'deposit [positive_int]'")
+        print("Example check: 'check balance'")
         print("To close ATM, type q")
         print("---------------------------------------------------")
         while True:
@@ -39,18 +40,26 @@ class ATM:
                 break
             inp = inp.split(' ')
             sendstr = self.user + '-' + self.pw + '-'
+            if len(inp) != 2:
+                print("not a valid operation supported by bank")
+                continue
             if inp[0].lower() == 'withdraw':
                 sendstr += inp[0].lower()
             elif inp[0].lower() == 'deposit':
+                sendstr += inp[0].lower()
+            elif inp[0].lower() == 'check':
                 sendstr += inp[0].lower()
             else:
                 print("not a valid operation supported by bank")
                 continue
             if inp[1].isnumeric():
                 sendstr += '-' + inp[1]
+            elif inp[1].lower() == 'balance':
+                sendstr += '-' + inp[1]
             else:
                 print("invalid money amount")
                 continue
+
             sendstr = str(self.counter) + '-' + sendstr
             #in bank, verify the hash including all dashes except the one right before the sha
             sendstr = aes.encrypt(sendstr + "-" + hash.sha256(sendstr),self.aeskey)

@@ -63,6 +63,13 @@ class Bank:
             sendback = str(self.counter) + '-' + sendback
             sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
+
+    def check(self,usr):
+            sendback = usr + "-"
+            sendback += self.usertomoney[usr] + '-' + "check successful"
+            sendback = str(self.counter) + '-' + sendback
+            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
             
     def post_handshake(self):
         while True:
@@ -99,6 +106,8 @@ class Bank:
                 self.withdraw(cmd[0],int(cmd[3]))
             elif cmd[2] == 'deposit':
                 self.deposit(cmd[0],int(cmd[3]))
+            elif cmd[2] == 'check':
+                self.check(cmd[0])
             else:
                 sendback = cmd[0] + "-"
                 sendback += self.usertomoney[usr] + '-' + "invalid command"
