@@ -23,7 +23,7 @@ class ATM:
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         print("ATM")
         print("Example withdraw: 'withdraw [positive_int]'")
-        print("Example deposit: 'desposit [positive_int]'")
+        print("Example deposit: 'deposit [positive_int]'")
         print("To close ATM, type q")
         print("---------------------------------------------------")
         while True:
@@ -44,6 +44,7 @@ class ATM:
                 sendstr += '-' + inp[1]
             else:
                 print("invalid money amount")
+                continue
             #in bank, verify the hash including all dashes except the one right before the sha
             sendstr = aes.encrypt(sendstr + "-" + hash.sha256(sendstr),self.aeskey)
             self.s.send(sendstr.encode('utf-8'))

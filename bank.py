@@ -83,7 +83,6 @@ class Bank:
                 continue
             if cmd[2] == 'withdraw':
                 self.withdraw(cmd[0],int(cmd[3]))
-                
             elif cmd[2] == 'deposit':
                 self.deposit(cmd[0],int(cmd[3]))
             else:
