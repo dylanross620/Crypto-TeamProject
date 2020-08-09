@@ -37,11 +37,11 @@ class ATM:
         if self.scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
             bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
-            self.bankpubkey = bkeypairs[0]
+            self.bankpubkey = bkeypairs[0] # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
         else:
             keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
             bkeypairs = rsa.load_keys("local_storage/bank-elgamal.txt",4096)
-            self.bankpubkey = bkeypairs[0]
+            self.bankpubkey = bkeypairs[0] # see above
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         print("Handshake info --> sending over atm pubkey...")
