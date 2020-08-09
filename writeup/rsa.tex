@@ -78,4 +78,6 @@
 		$q-1$ were coprime with our desired value of $e$. Because $\phi(N)=(p-1)*(q-1)$, if both factors were coprime to $e$ then $\phi$ must also be coprime. In order to prevent small private
 		exponent attacks, we added a check during key generation to see if the resulting $d$ was too small (see Wiener's attack bound above). In cases where $d$ is too small, we restart the key
 		generation. In order to prevent our ciphertexts from being malleable, each one also contains a hash of the message. As such, each ciphertext is plaintext aware, and multiplying the
-		ciphertext by a constant will prevent the hash from matching and alert the receiver that the message has been tampered with.
+		ciphertext by a constant will prevent the hash from matching and alert the receiver that the message has been tampered with. In order to ensure that we did not make any errors in our
+		RSA implementation, we made sure to reference the paper \href{https://crypto.stanford.edu/~dabo/pubs/papers/RSA-survey.pdf}{"Twenty Years of Attacks on the RSA Cryptosystem"} by Dan
+		Boneh to check if anything mentioned in the paper applied to our system.
