@@ -1,5 +1,7 @@
 import PublicKey.utils as utils
+import hash
 import secrets
+from math import gcd
 
 # Load keys from a given file, generating them if they don't exist
 # In the case that keys must be generated, it will generate such that
@@ -76,3 +78,35 @@ def decrypt(msg: tuple, priv_key: tuple) -> str:
     decrypted = pow(y1, a, p)
     decrypted = (y2 * pow(decrypted, -1, p)) % p
     return utils.num_to_str(decrypted, p.bit_length())
+
+# Uses the private key to sign a given message
+def sign(msg: str, priv_key: tuple, pub_key: tuple) -> tuple:
+    p, a = priv_key
+    alpha = pub_key[1]
+
+    hashed = int(hash.sha256(msg), 16)
+
+    s = 0
+    r = 0
+    while s == 0:
+        k = 1
+        while k < 2 or gcd(k, p-1) != 1:
+            k = secrets.randbelow(p-1)
+
+        r = pow(alpha, k, p)
+        s = ((hashed - a*r) * pow(k, -1, p-1)) % (p-1)
+
+    return (r, s)
+
+# Uses the public key to verify an elgamal signature and its corresponding message
+# returns true iff the signature is valid
+def verify_signature(signature: tuple, pub_key: tuple, msg: str) -> bool:
+    p, alpha, beta = pub_key
+
+    hashed = int(hash.sha256(msg), 16)
+
+    r, s = signature
+    if 0 >= r or r >= p or 0 >= s or s >= p-1:
+        return False
+
+    return pow(alpha, hashed, p) == (pow(beta, r, p) * pow(r, s, p)) % p
