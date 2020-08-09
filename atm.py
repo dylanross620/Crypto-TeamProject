@@ -77,7 +77,6 @@ class ATM:
     def send_pub_gamal(self):
         pubkeystr = str(self.pubkey)
         pkeylen = len(pubkeystr) // 8
-        print(pkeylen)
         q1 = pubkeystr[0:pkeylen]
         q2 = pubkeystr[pkeylen:(pkeylen*2)]
         q3 = pubkeystr[(pkeylen*2):(pkeylen*3)]
@@ -86,6 +85,14 @@ class ATM:
         q6 = pubkeystr[(pkeylen*5):(pkeylen*6)]
         q7 = pubkeystr[(pkeylen*6):(pkeylen*7)]
         q8 = pubkeystr[(pkeylen*7):]
+        print(f"lenq1: {len(q1)} --> q1: {q1}")
+        print(f"lenq2: {len(q2)} --> q2: {q2}")
+        print(f"lenq3: {len(q3)} --> q3: {q3}")
+        print(f"lenq4: {len(q4)} --> q4: {q4}")
+        print(f"lenq5: {len(q5)} --> q5: {q5}")
+        print(f"lenq6: {len(q6)} --> q6: {q6}")
+        print(f"lenq7: {len(q7)} --> q7: {q7}")
+        print(f"lenq8: {len(q8)} --> q8: {q8}")
         q1 = q1 + '-' + hash.sha256(q1)
         q2 = q2 + '-' + hash.sha256(q2)
         q3 = q3 + '-' + hash.sha256(q3)

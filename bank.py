@@ -124,7 +124,6 @@ class Bank:
     def rec_atmpub_gamal(self):
         q1 = self.client.recv(4096)
         q1 = q1.decode('utf-8')
-        print(repr(q1))
         q1tmp = q1.strip("(").strip(")").split(",")
         q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
         q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
