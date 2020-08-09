@@ -37,7 +37,7 @@ class Bank:
     def countercheck(self, msg):
         if(int(msg[0]) <= self.counter):
             raise Exception("counter check failed or msg tampered with")
-        self.counter = int(msg[0]) + 1\
+        self.counter = int(msg[0]) + 1
 
     def withdraw(self,usr, amt): 
         #we include username/pw in the msg so we can auth and not just use self.clientname blindly (incase blackhat sends packets)
