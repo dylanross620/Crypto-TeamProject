@@ -5,4 +5,77 @@
 	exponentiation.
 
 	\subsection{Background Math}\label{sec:rsa-background}
-		This encryption scheme relies heavily on modular arithmetic, notably exponentiation.
+		This encryption scheme relies heavily on modular arithmetic, notably exponentiation. Below are necessary sections to understand the math behind the RSA algorithm.
+
+		\subsubsection{GCD, Prime Numbers, and Coprimality}\label{sec:rsa-gcd}
+			A prime number is an integer greater than 1 that has exactly 2 factors: 1 and itself. Examples of such numbers include 2, 3, 5, 7, and 11. The exact distribution of prime numbers
+			is not known, and this fact plays a large role in various parts of cryptography. However, the distribution of prime numbers can be approximated by the prime number theorem, which
+			states that $\pi(N)\sim\frac{N}{\text{log}(N)}$ where $\pi(N)$ is the number of prime numbers $p$ such that $p\leq N$. Every integer can be written as a product of primes, but
+			finding such primes is a difficult problem. This problem is what creates the security of RSA.\\
+
+			We will define $gcd(a, b)$ as the greatest common divisor of integers $a$ and $b$. That is, $gcd(a, b)$ is the largest integer $g$ such that $g|a$ and $g|b$. For example, 
+			$gcd(4,6)=2$ as the factors of 4 are $\{1,2,4\}$, the factors of 6 are $\{1,2,3,6\}$ and 2 is the largest integer in the intersection of these factors. We say that two numbers
+			are coprime if their $gcd$ is 1. For example, 4 and 9 are coprime as they share no factors besides 1 even though neither number is prime. By the definition of prime numbers, a
+			prime number $p$ is coprime with all numbers $a$ when $a<p$. That is, $\forall a<p, p\in\text{prime numbers}:gcd(a, p)=1$. The $gcd$ of two integers $a$ and $b$ can efficiently
+			be computed via the Euclidean algorithm, which states that $gcd(a,b)=gcd(b,a\text{ mod }b)$.
+
+		\subsubsection{Fermat's Little Theorem and Primality Testing}\label{sec:rsa-fermat}
+			Fermat's little theorem states that, for any prime $p$ and any integer $a$ such that $a\not\equiv0\text{ mod }p$, $a^{p-1}\equiv1\text{ mod }p$. While deterministic primality
+			testing is infeasible due to the unknown distribution of primes, Fermat's little theorem provides an efficient way to perform a probabilistic primality test. For any number
+			$n$, we can test if $n$ is prime by generating a random number $a$ where $1\leq a<n$ and test if $a^{n-1}\equiv1\text{ mod }n$. If this test does not hold, $n$ is definitely
+			composite, while the test holding implies that $n$ may be prime. Repeating this test several times can greatly reduce the probability of incorrectly labelling a composite as
+			prime.\\
+
+			Using the primality test described above and the approximate distribution of primes discused in section \ref{sec:rsa-gcd}, we can efficiently generate random primes of a desired bit
+			length. This can be done by generating random numbers of the correct length and testing if they are prime. Due to the approximation of $\pi{N}$, we can expect this process to
+			be approximately linear in time complexity.
+
+		\subsubsection{Euler's Theorem}\label{sec:rsa-eulers}
+			We will define Euler's totient function $\phi(n)$ as the number of integers $a<n$ such that $gcd(a, n)=1$. In the case of a prime $p$, as was mentioned in section \ref{sec:rsa-gcd},
+			$\phi(p)=p-1$ and as such Euler's theorem is consistent with Fermat's little theorem. Given a composite number $n=pq$ where $p$ and $q$ are primes, we can calculate the totient of
+			$n$ by $\phi(n)=\phi(p)*\phi(q)=(p-1)*(q-1)$. As such, we can calculate the totient of a composite number in constant time if we have its prime factorization. This fact serves as 
+			the basis of the trapdoor function of RSA.\\
+
+			Euler's Theorem states that, for $a$ and $n$ such that $gcd(a,n)=1$, $a^{\phi(n)}\equiv 1\text{ mod }n$. From here, it follow that $a^{\phi(n)+1}\equiv a\text{ mod }n$. This is
+			because $a^{\phi(n)+1}=a^{\phi(n)}*a\equiv 1*a=1\text{ mod }n$.
+
+	\subsection{Key Generation}\label{sec:rsa-keys}
+		RSA keys have two parts: the public key and the private key. The public key consists of the integers $N$ and $e$ and is used for message encryption while the private key consists of the
+		integers $N$ and $d$ and is used for message decryption. As the names imply, the public key can be seen by anyone while the private key is kept as a secret.\\
+
+		To generate the keys, first pick two large primes $p$ and $q$ that are a similar size. We will let $N=pq$ be the public (and private) modulus. We will also pick a random integer $e$ such
+		that $e<\phi(N)$ and $gcd(e,\phi(N))=1$. As was mentioned above, the public key consists of this pair ($N$, $e$). We then calculate $d\equiv e^{-1}\text{ mod }\phi(N)$, and this makes up
+		the private key along with $N$.
+
+	\subsection{Encryption}\label{sec:rsa-encryption}
+		In order to send an encrypted message using RSA, the sender will encrypt the message using the intended receiver's public key. As such, anyone can encrypt and send a person a message,
+		but only the intended recipient can decrypt and read the message using the corresponding private key.\\
+
+		Recall that the receiver's public key is made up of two parts, $N$ and $e$. First, the sender encrypts their message as an integer $m$ where $m<N$. They can then calculate the ciphertext
+		$c=m^e\text{ mod }N$. This ciphertext can then be sent to the recipient to be decrypted and read.
+
+	\subsection{Decryption}\label{sec:rsa-decryption}
+		In order to decrypt a message that was encrypted using RSA, the receiver must use their own private key. Recall that the private key consists of two parts, $N$ and $d$. Upon receiving
+		ciphertext $c$, the message can be decrypted to the original message $m$ by computing $m=c^d\text{ mod }N$. This works due to the construction of $e$ and $d$. Because $d\equiv e^{-1}
+		\text{ mod }\phi(N)$, we know that $de=k\phi(n)+1$ for some integer $k$. Due to the fact that $c\equiv m^e\text{ mod }N$, $c^d\equiv (m^e)^d=m^{ed}=m^{k\phi(N)+1}$. It follows from the
+		results of section \ref{sec:rsa-eulers} that this is equivalent to the original message $m$.
+
+	\subsection{Security Measures in Implementation}\label{sec:rsa-security}
+		RSA has many pitfalls that can result in a loss of security if implemented improperly. For instance, there are an entire class of attacks that stem from the public exponent $e$ being
+		too small. Selecting $e=3$ is a common example of this, and the decreased size of $e$ makes the encryption process faster. However, it allows attacks such as Hastad's Broadcast attack,
+		where the same message being sent to more than $e$ people can be decrypted without knowing $d$ by using the Chinese Remainder Theorem. Even more simply, it is very important that
+		$m^e\ge N$. If $e$ and $m$ are small enough that this is not true, then the message can be decrypted by calculating $m=\sqrt[e]c$. Another potential pitfall of RSA is if the private 
+		exponent $d$ is too small. In cases where $d < \frac13N^{\frac14}$, Wiener's Attack can be used to recover $d$ and break the encryption using Wiener's theorem and continued fractions.\\
+
+		Even in the case that the parameters are chosen appropriately, some vulnerabilities may remain due to the malleable nature of RSA. Given ciphertext $c\equiv m^e$, an attacker can choose
+		a desired constant $r$ and compute a new ciphertext $c'$ that decrypts to $m'=rm$. This is done by calculating $c'=r^ec\text{ mod }N$. This works because, during the decryption process,
+		the receiver will compute $m'\equiv (c')^d=(r^ec)^d=(r^em^e)^d=r^{ed}m^{ed}\text{ mod }N\equiv rm$.\\
+
+		During our implementation of RSA, we took all of these potential vulnerabilities into account. In order to prevent small public exponent attacks, we set a fixed value for $e$ of 65537.
+		This value of $e$ is large enough to prevent small public exponent attacks, yet it a prime number that can be written as $2^k+1$. The fact that $e$ is prime is important since $e$ must
+		be coprime with $\phi(N)$ and a prime $e$ makes this much more likely. The fact that $e$ is one more than a power of 2 means that the exponentiation of $m^e\text{ mod }N$ can be
+		computed quickly as well. In order to facilitate using a chosen value for $e$, we had to add some additional logic when generating $p$ and $q$. We only accepted values such that $p-1$ and
+		$q-1$ were coprime with our desired value of $e$. Because $\phi(N)=(p-1)*(q-1)$, if both factors were coprime to $e$ then $\phi$ must also be coprime. In order to prevent small private
+		exponent attacks, we added a check during key generation to see if the resulting $d$ was too small (see Wiener's attack bound above). In cases where $d$ is too small, we restart the key
+		generation. In order to prevent our ciphertexts from being malleable, each one also contains a hash of the message. As such, each ciphertext is plaintext aware, and multiplying the
+		ciphertext by a constant will prevent the hash from matching and alert the receiver that the message has been tampered with.
