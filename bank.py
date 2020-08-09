@@ -195,6 +195,8 @@ class Bank:
         print(clienthello)
         clientname = repr(clienthello[0]).strip("'")
         atmprefs = json.loads(clienthello[1])
+        if clientname not in list(self.usertopass.keys()):
+            raise Exception("Supplied atm username not in bank records")
         print(f"ATM user " + clientname + " has initiated handshake, hello to BANK server!")
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
@@ -213,36 +215,56 @@ class Bank:
         self.client.send(self.scheme.encode('utf-8'))
         #we need to recieve atm pubkey in 2 parts now
         print("Handshake info --> recieving atm pubkey...")
-        
         if self.scheme == 'rsa':
             self.rec_atmpub_rsa()
         else:
             self.rec_atmpub_gamal()
             
         print("Handshake info --> atm pubkey successully recieved")
-        print("Handshake info --> verifying bank to atm")
-        if clientname not in list(self.usertopass.keys()):
-            raise Exception("Supplied atm username not in bank records")
-        pwhash2 = self.usertopass[clientname]
-        if self.scheme == 'rsa':
-            pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
-            pwhash2 = rsa.encrypt(pwhash2, self.atmpubkey)
-            self.client.send(str(pwhash2).encode('utf-8'))
-            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
-        else:
-            pw1of2 = pwhash2[:len(pwhash2)//2]
-            pw2of2 = pwhash2[len(pwhash2)//2:]
-            pw1of2 = pw1of2 + '-' + hash.sha256(pw1of2)
-            pw2of2 = pw2of2 + '-' + hash.sha256(pw2of2)
-            pw1of2 = elgamal.encrypt(pw1of2, self.atmpubkey)
-            pw2of2 = elgamal.encrypt(pw2of2, self.atmpubkey)
-            self.client.send(str(pw1of2).encode('utf-8'))
-            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}") #atm prints good block 1/2 and 2/2
-            self.client.send(str(pw2of2).encode('utf-8'))
-            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}") #atm prints good block 1/2 and 2/2
-            self.client.send("breaker".encode('utf-8')) #need blocking call for pretty print
-            print(f"Handshake info --> atm responded with {self.client.recv(1024).decode('utf-8')}")
 
+        print("Handshake info --> verifying atm password")
+        if self.scheme == 'rsa':
+            checkpw = self.client.recv(4096).decode('utf-8')
+            checkpw = rsa.decrypt(int(checkpw), self.privkey)
+            checkpw = checkpw.split('-')
+            if hash.sha256(checkpw[0]) == checkpw[1] and checkpw[0] == self.usertopass[clientname]:
+                self.client.send("good pw check".encode('utf-8'))
+            else:
+                self.client.send("pw check failed or msg tampered with".encode('utf-8'))
+                raise Exception("pw check failed or msg tampered with")
+        else:
+            checkpw = self.client.recv(4096).decode('utf-8')
+            checkpwtmp = checkpw.strip("(").strip(")").split(",")
+            checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
+            checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
+            checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
+            checkpw = checkpw.split('-')
+            if hash.sha256(checkpw[0]) == checkpw[1]:
+                self.client.send("good pw check block 1/2".encode('utf-8'))
+            else:
+                self.client.send("pw check failed or msg tampered with block 1/2".encode('utf-8'))
+                raise Exception("pw check failed or msg tampered with block 1/2")
+            checkpwwhole = ""
+            checkpwwhole += checkpw[0]
+            checkpw = self.client.recv(4096).decode('utf-8')
+            checkpwtmp = checkpw.strip("(").strip(")").split(",")
+            checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
+            checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
+            checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
+            checkpw = checkpw.split('-')
+            if hash.sha256(checkpw[0]) == checkpw[1]:
+                self.client.send("good pw check block 2/2".encode('utf-8'))
+            else:
+                self.client.send("pw check failed or msg tampered with block 2/2".encode('utf-8'))
+                raise Exception("pw check failed or msg tampered with block 2/2")
+            self.client.recv(4096) #need blocking call for pretty print
+            checkpwwhole += checkpw[0]
+            if checkpwwhole == self.usertopass[clientname]:
+                self.client.send("good pw check with combined blocks".encode('utf-8'))
+            else:
+                self.client.send("pw check failed with all combined blocks".encode('utf-8'))
+                raise Exception("pw check failed with all combined blocks")
+        print("Handshake info --> good password verification")
         print("Handshake info --> starting AES shared key transfer")
         if self.scheme == 'rsa':
             tmpaes = self.client.recv(4096).decode('utf-8')

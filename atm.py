@@ -105,39 +105,21 @@ class ATM:
         self.s.send(str(q1).encode('utf-8'))
         print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
 
-        print("Handshake info --> starting password verification")
-        checkpw = self.s.recv(4096).decode('utf-8')
-        checkpwtmp = checkpw.strip("(").strip(")").split(",")
-        checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
-        checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
-        checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
-        checkpw = checkpw.split('-')
-        if hash.sha256(checkpw[0]) == checkpw[1]:
-            self.s.send("good pw check block 1/2".encode('utf-8'))
-        else:
-            self.s.send("pw check failed or msg tampered with block 1/2".encode('utf-8'))
-            raise Exception("pw check failed or msg tampered with block 1/2")
-        checkpwwhole = ""
-        checkpwwhole += checkpw[0]
-        checkpw = self.s.recv(4096).decode('utf-8')
-        checkpwtmp = checkpw.strip("(").strip(")").split(",")
-        checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
-        checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
-        checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
-        checkpw = checkpw.split('-')
-        if hash.sha256(checkpw[0]) == checkpw[1]:
-            self.s.send("good pw check block 2/2".encode('utf-8'))
-        else:
-            self.s.send("pw check failed or msg tampered with block 2/2".encode('utf-8'))
-            raise Exception("pw check failed or msg tampered with block 2/2")
-        self.s.recv(4096) #need blocking call for pretty print
-        checkpwwhole += checkpw[0]
-        if checkpwwhole == self.pw:
-            self.s.send("good pw check with combined blocks".encode('utf-8'))
-        else:
-            self.s.send("pw check failed with all combined blocks".encode('utf-8'))
-            raise Exception("pw check failed with all combined blocks")
-
+        print("Handshake info --> starting password verification with bank")
+        pwhash2 = self.pw
+        pw1of2 = pwhash2[:len(pwhash2)//2]
+        pw2of2 = pwhash2[len(pwhash2)//2:]
+        pw1of2 = pw1of2 + '-' + hash.sha256(pw1of2)
+        pw2of2 = pw2of2 + '-' + hash.sha256(pw2of2)
+        pw1of2 = elgamal.encrypt(pw1of2, self.bankpubkey)
+        pw2of2 = elgamal.encrypt(pw2of2, self.bankpubkey)
+        self.s.send(str(pw1of2).encode('utf-8'))
+        print(f"Handshake info --> bank responded with {self.s.recv(1024).decode('utf-8')}") #atm prints good block 1/2 and 2/2
+        self.s.send(str(pw2of2).encode('utf-8'))
+        print(f"Handshake info --> bank responded with {self.s.recv(1024).decode('utf-8')}") #atm prints good block 1/2 and 2/2
+        self.s.send("breaker".encode('utf-8')) #need blocking call for pretty print
+        print(f"Handshake info --> bank responded with {self.s.recv(1024).decode('utf-8')}")
+        print("Handshake info --> password verified with bank")
         aestmp1of2 = self.aeskey[:len(self.aeskey)//2]
         aestmp2of2 = self.aeskey[len(self.aeskey)//2:]
         aestmp1of2 = aestmp1of2 + '-' + hash.sha256(aestmp1of2)
@@ -175,15 +157,12 @@ class ATM:
         print(f"Handshake info (rsa) --> bank replied {self.s.recv(1024).decode('utf-8')}")
 
         print("Handshake info --> starting password verification")
-        checkpw = self.s.recv(4096).decode('utf-8')
-        checkpw = rsa.decrypt(int(checkpw), self.privkey)
-        checkpw = checkpw.split('-')
-        if hash.sha256(checkpw[0]) == checkpw[1] and checkpw[0] == self.pw:
-            self.s.send("good pw check".encode('utf-8'))
-        else:
-            self.s.send("pw check failed or msg tampered with".encode('utf-8'))
-            raise Exception("pw check failed or msg tampered with")
-
+        pwhash2 = self.pw
+        pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
+        pwhash2 = rsa.encrypt(pwhash2, self.atmpubkey)
+        self.s.send(str(pwhash2).encode('utf-8'))
+        print(f"Handshake info --> bank responded with {self.s.recv(1024).decode('utf-8')}")
+        print("Handshake info --> password verified with bank")
         aestmp = self.aeskey + '-' + hash.sha256(self.aeskey)
         aestmp = rsa.encrypt(aestmp, self.bankpubkey)
         self.s.send(str(aestmp).encode('utf-8'))
