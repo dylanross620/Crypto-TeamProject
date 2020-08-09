@@ -59,7 +59,7 @@ def sha1(msg: str) -> str:
             c = rotl(b, 32, 30)
             b = a
             a = T
-            print(f"t={t}: a={format(a, '08x')} b={format(b, '08x')} c={format(c, '08x')} d={format(d, '08x')} e={format(e, '08x')}")
+            # print(f"t={t}: a={format(a, '08x')} b={format(b, '08x')} c={format(c, '08x')} d={format(d, '08x')} e={format(e, '08x')}")
 
         H[0] = (a + H[0]) % modulus
         H[1] = (b + H[1]) % modulus

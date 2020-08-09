@@ -18,6 +18,7 @@ class Bank:
         self.privkey = None
         self.atmpubkey = None
         self.aeskey = None
+        self.mackey = None
         self.counter = 0
 
         self.s = socket.socket()
@@ -117,101 +118,6 @@ class Bank:
             
         self.s.close()
 
-    def rec_atmpub_rsa(self):
-        q1 = self.client.recv(4096)
-        q1 = q1.decode('utf-8')
-        if self.scheme == 'rsa':
-            q1 = rsa.decrypt(int(q1), self.privkey)
-        else:
-            q1tmp = q1.strip("(").strip(")").split(",")
-            q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-            q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-            q1 = elgamal.decrypt(q1tmp, self.privkey)
-        q1 = q1.split('-')
-        if hash.sha1(q1[0]) == q1[1]:
-            self.client.send("good first quarter recieved".encode('utf-8'))
-        else:
-            self.client.send("first quarter tampered".encode('utf-8'))
-            raise Exception("first quarter tampered")
-
-        q2 = self.client.recv(4096)
-        q2 = q2.decode('utf-8')
-        if self.scheme == 'rsa':
-            q2 = rsa.decrypt(int(q2), self.privkey)
-        else:
-            q2tmp = q2.strip("(").strip(")").split(",")
-            q2tmp = [x.strip() for x in q2tmp] #take away tuple space or wierd stuff
-            q2tmp = (int(q2tmp[0]), int(q2tmp[1])) 
-            q2 = elgamal.decrypt(q2tmp, self.privkey)
-        q2 = q2.split('-')
-        if hash.sha1(q2[0]) == q2[1]:
-            self.client.send("good second quarter recieved".encode('utf-8'))
-        else:
-            self.client.send("second quarter tampered".encode('utf-8'))
-            raise Exception("second quarter tampered")
-
-        q3 = self.client.recv(4096)
-        q3 = q3.decode('utf-8')
-        if self.scheme == 'rsa':
-            q3 = rsa.decrypt(int(q3), self.privkey)
-        else:
-            q3tmp = q3.strip("(").strip(")").split(",")
-            q3tmp = [x.strip() for x in q3tmp] #take away tuple space or wierd stuff
-            q3tmp = (int(q3tmp[0]), int(q3tmp[1])) 
-            q3 = elgamal.decrypt(q3tmp, self.privkey)
-        q3 = q3.split('-')
-        if hash.sha1(q3[0]) == q3[1]:
-            self.client.send("good third quarter recieved".encode('utf-8'))
-        else:
-            self.client.send("third quarter tampered".encode('utf-8'))
-            raise Exception("third quarter tampered")
-
-        q4 = self.client.recv(4096)
-        q4 = q4.decode('utf-8')
-        if self.scheme == 'rsa':
-            q4 = rsa.decrypt(int(q4), self.privkey)
-        else:
-            q4tmp = q4.strip("(").strip(")").split(",")
-            q4tmp = [x.strip() for x in q4tmp] #take away tuple space or wierd stuff
-            q4tmp = (int(q4tmp[0]), int(q4tmp[1])) 
-            q4 = elgamal.decrypt(q4tmp, self.privkey)
-        q4 = q4.split('-')
-        if hash.sha1(q4[0]) == q4[1]:
-            self.client.send("good fourth quarter recieved".encode('utf-8'))
-        else:
-            self.client.send("fourth quarter tampered".encode('utf-8'))
-            raise Exception("fourth quarter tampered")
-        
-        self.atmpubkey = q1[0]
-        self.atmpubkey += q2[0]
-        self.atmpubkey += q3[0]
-        self.atmpubkey += q4[0]
-        apubtmp = self.atmpubkey.strip("(").strip(")").split(",")
-        apubtmp = [x.strip() for x in apubtmp] #take away tuple space or wierd stuff
-        self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]))
-
-    def rec_atmpub_gamal(self):
-        self.atmpubkey = ""
-        for z in range(0,18):
-            q1 = self.client.recv(4096)
-            q1 = q1.decode('utf-8')
-            q1tmp = q1.strip("(").strip(")").split(",")
-            q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
-            q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
-            q1 = elgamal.decrypt(q1tmp, self.privkey)
-            q1 = q1.split('-')
-            if hash.sha1(q1[0]) == q1[1]:
-                self.client.send(f"good block {z}/17 recieved".encode('utf-8'))
-            else:
-                self.client.send(f"{z}/17 tampered".encode('utf-8'))
-                raise Exception(f"{z}/17 tampered")
-
-            self.atmpubkey += q1[0]
-
-        apubtmp = self.atmpubkey.strip("(").strip(")").split(",")
-        apubtmp = [x.strip() for x in apubtmp] #take away tuple space or wierd stuff
-        self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]), int(apubtmp[2]))
-
     def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
         self.client, self.clientaddr = self.s.accept()
         clienthello = self.client.recv(1024)
@@ -219,8 +125,8 @@ class Bank:
         print(clienthello)
         clientname = repr(clienthello[0]).strip("'")
         atmprefs = json.loads(clienthello[1])
-        if clientname not in list(self.usertopass.keys()):
-            raise Exception("Supplied atm username not in bank records")
+        # if clientname not in list(self.usertopass.keys()):
+        #     raise Exception("Supplied atm username not in bank records")
         print(f"ATM user " + clientname + " has initiated handshake, hello to BANK server!")
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
@@ -237,58 +143,25 @@ class Bank:
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         self.client.send(self.scheme.encode('utf-8'))
-        #we need to recieve atm pubkey in 2 parts now
-        print("Handshake info --> recieving atm pubkey...")
+        #need to recieve mac key via asymmetric encryption
+        print(f"Handshake info --> acquiring MAC key...")
+        mactmp = self.client.recv(99999).decode('utf-8')
         if self.scheme == 'rsa':
-            self.rec_atmpub_rsa()
+            mactmp = rsa.decrypt(int(mactmp),self.privkey)
         else:
-            self.rec_atmpub_gamal()
-            
-        print("Handshake info --> atm pubkey successully recieved")
+            mactmp = mactmp.strip("(").strip(")").split(",")
+            mactmp = [x.strip() for x in mactmp] #take away tuple space or wierd stuff
+            mactmp = (int(mactmp[0]), int(mactmp[1]))
+            mactmp = elgamal.decrypt(mactmp,self.privkey)
+        mactmp = mactmp.split('-')
+        if hash.sha1(mactmp[0]) == mactmp[1]:
+            self.client.send("good MAC key recieved".encode('utf-8'))
+            self.mackey= mactmp[0]
+        else:
+            self.client.send("error in MAC key".encode('utf-8'))
+            raise Exception("error in mac key")
 
-        print("Handshake info --> verifying atm password")
-        if self.scheme == 'rsa':
-            checkpw = self.client.recv(4096).decode('utf-8')
-            checkpw = rsa.decrypt(int(checkpw), self.privkey)
-            checkpw = checkpw.split('-')
-            if hash.sha1(checkpw[0]) == checkpw[1] and checkpw[0] == self.usertopass[clientname]:
-                self.client.send("good pw check".encode('utf-8'))
-            else:
-                self.client.send("pw check failed or msg tampered with".encode('utf-8'))
-                raise Exception("pw check failed or msg tampered with")
-        else:
-            checkpw = self.client.recv(4096).decode('utf-8')
-            checkpwtmp = checkpw.strip("(").strip(")").split(",")
-            checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
-            checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
-            checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
-            checkpw = checkpw.split('-')
-            if hash.sha1(checkpw[0]) == checkpw[1]:
-                self.client.send("good pw check block 1/2".encode('utf-8'))
-            else:
-                self.client.send("pw check failed or msg tampered with block 1/2".encode('utf-8'))
-                raise Exception("pw check failed or msg tampered with block 1/2")
-            checkpwwhole = ""
-            checkpwwhole += checkpw[0]
-            checkpw = self.client.recv(4096).decode('utf-8')
-            checkpwtmp = checkpw.strip("(").strip(")").split(",")
-            checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
-            checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
-            checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
-            checkpw = checkpw.split('-')
-            if hash.sha1(checkpw[0]) == checkpw[1]:
-                self.client.send("good pw check block 2/2".encode('utf-8'))
-            else:
-                self.client.send("pw check failed or msg tampered with block 2/2".encode('utf-8'))
-                raise Exception("pw check failed or msg tampered with block 2/2")
-            self.client.recv(4096) #need blocking call for pretty print
-            checkpwwhole += checkpw[0]
-            if checkpwwhole == self.usertopass[clientname]:
-                self.client.send("good pw check with combined blocks".encode('utf-8'))
-            else:
-                self.client.send("pw check failed with all combined blocks".encode('utf-8'))
-                raise Exception("pw check failed with all combined blocks")
-        print("Handshake info --> good password verification")
+        print("Handshake info --> MAC key acquired")
         print("Handshake info --> starting AES shared key transfer")
         if self.scheme == 'rsa':
             tmpaes = self.client.recv(4096).decode('utf-8')
@@ -329,6 +202,27 @@ class Bank:
                 self.client.send("bad block".encode('utf-8'))
                 raise Exception("AES key tampered with")
 
+        ##----now for the atmpubkey
+        print("Handshake info --> recieving atm pubkey...")
+        atmpubtmp = self.client.recv(99999).decode('utf-8')
+        atmpubtmp = aes.decrypt(atmpubtmp,self.aeskey)
+        atmpubtmp = atmpubtmp.split('-')
+        if hash.hmac(atmpubtmp[0],self.mackey) == atmpubtmp[1]:
+            self.client.send("good atmkey recieved".encode('utf-8'))
+        else:
+            self.client.send("bad atmkey".encode('utf-8'))
+            raise Exception("bad atmkey")
+        
+        if self.scheme == 'rsa':
+            atmpubtmp = atmpubtmp[0].strip("(").strip(")").split(",")
+            atmpubtmp = [x.strip() for x in atmpubtmp] #take away tuple space or wierd stuff
+            self.atmpubkey = (int(atmpubtmp[0]), int(atmpubtmp[1]))
+        else:
+            atmpubtmp = atmpubtmp[0].strip("(").strip(")").split(",")
+            atmpubtmp = [x.strip() for x in atmpubtmp] #take away tuple space or wierd stuff
+            self.atmpubkey = (int(atmpubtmp[0]), int(atmpubtmp[1]), int(atmpubtmp[2]))
+        
+        print("Handshake info --> atm pubkey successully recieved")
         print("Handshake info --> Bank ready to go!")
         self.post_handshake()
 
