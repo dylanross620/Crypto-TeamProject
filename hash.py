@@ -75,7 +75,7 @@ hmac_keys = {}
 # msg is a plaintext string
 # key is a hex string
 def hmac(msg: str, key: str) -> str:
-    B = 32
+    B = 64
 
     # Ensure key is right size
     if len(key) > 2*B: # 2B because each byte in hex is 2 characters
