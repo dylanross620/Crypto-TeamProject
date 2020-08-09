@@ -17,8 +17,14 @@ class ATM:
         self.pubkey = None
         self.privkey = None
         self.bankpubkey = None
+        self.counter = 1;
         self.s = socket.socket()
         self.s.connect(('127.0.0.1', 5432))
+
+    def countercheck(self, msg):
+        if(int(msg[0]) <= self.counter):
+            raise Exception("counter check failed or msg tampered with")
+        self.counter = int(msg[0]) + 1
 
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         print("ATM")
@@ -45,6 +51,7 @@ class ATM:
             else:
                 print("invalid money amount")
                 continue
+            sendstr = str(self.counter) + '-' + sendstr
             #in bank, verify the hash including all dashes except the one right before the sha
             sendstr = aes.encrypt(sendstr + "-" + hash.sha256(sendstr),self.aeskey)
             self.s.send(sendstr.encode('utf-8'))
@@ -52,9 +59,11 @@ class ATM:
             bankret = self.s.recv(99999).decode('utf-8')#parse this out
             bankret = aes.decrypt(bankret,self.aeskey)
             bankret = bankret.split('-')
+            self.countercheck(bankret)
             chkhash = bankret[-1]
             bankret.remove(chkhash)
             againsthash = '-'.join(bankret)
+            bankret = bankret[1:]
             if hash.sha256(againsthash) != chkhash:
                 print("bank return msg integrity compromised")
                 continue
