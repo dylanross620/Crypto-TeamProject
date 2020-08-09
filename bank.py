@@ -72,13 +72,20 @@ class Bank:
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
             if hash.sha256(againsthash) != chkhash:
-                self.client.send("msg integrity compromised".encode('utf-8'))
+                sendback = "notverifieduser-0-msg integrity compromised"
+                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[0] not in list(self.usertopass.keys()):
-                self.client.send("username not known in bank")
+                sendback = "notverifieduser-0-username not known in bank"
+                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[1] != self.usertopass[cmd[0]]:
-                self.client.send("password not matching in bank")
+                sendback = cmd[0] + "-"
+                sendback += self.usertomoney[usr] + '-' + "password not matching in bank"
+                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[2] == 'withdraw':
                 self.withdraw(cmd[0],int(cmd[3]))
@@ -86,7 +93,10 @@ class Bank:
             elif cmd[2] == 'deposit':
                 self.deposit(cmd[0],int(cmd[3]))
             else:
-                self.client.send("invalid command".encode('utf-8'))
+                sendback = cmd[0] + "-"
+                sendback += self.usertomoney[usr] + '-' + "invalid command"
+                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
             
         self.s.close()
 
