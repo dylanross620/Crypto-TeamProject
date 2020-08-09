@@ -52,7 +52,7 @@ class ATM:
             else:
                 print("not a valid operation supported by bank")
                 continue
-            if inp[1].isnumeric():
+            if inp[1].isnumeric() and int(inp[1]) > 0:
                 sendstr += '-' + inp[1]
             elif inp[1].lower() == 'balance':
                 sendstr += '-' + inp[1]
@@ -68,7 +68,11 @@ class ATM:
             bankret = self.s.recv(99999).decode('utf-8')#parse this out
             bankret = aes.decrypt(bankret,self.aeskey)
             bankret = bankret.split('-')
-            self.countercheck(bankret)
+            try:
+                self.countercheck(bankret)
+            except Exception as e:
+                print(str(e))
+                continue
             chkhash = bankret[-1]
             bankret.remove(chkhash)
             againsthash = '-'.join(bankret)
