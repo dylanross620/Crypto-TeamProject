@@ -30,6 +30,7 @@ class Bank:
         self.s.listen(5)
         self.client = None
         self.clientaddr = None
+
     def addhashedpassword(self, username: str, password: str) :
         self.usertopass[username] = hash.sha256(password)
         open("local_storage/usertohashpass.txt", "w+").write(json.dumps(self.usertopass))
@@ -37,6 +38,15 @@ class Bank:
     def addusertomoney(self, username: str, amount: str): #adds info to runtime dict and dumps to file
         self.usertomoney[username] = amount
         open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
+
+    def withdraw(msg): 
+        #we include username/pw in the msg so we can auth and not just use self.clientname blindly (incase blackhat sends packets)
+        #msg format --> username-pw-money-msghash
+        #sends back username-remaining_money-msghash
+        pass
+
+    def deposit(msg):
+        pass
 
     def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
         self.client, self.clientaddr = self.s.accept()
@@ -164,7 +174,7 @@ class Bank:
         else:
             self.client.send("AES key tampered with".encode('utf-8'))
             raise Exception("AES key tampered with")
-
+        print("Handshake info --> Bank ready to go!")
 
 if __name__ == "__main__":
     testbank = Bank()

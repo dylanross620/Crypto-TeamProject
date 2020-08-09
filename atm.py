@@ -97,7 +97,8 @@ class ATM:
             aestmp = elgamal.encrypt(aestmp, self.bankpubkey)
         self.s.send(str(aestmp).encode('utf-8'))
         print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
-
+        print("Handshake info --> ATM ready to go!")
+        
     def send_user(): #need to hash, append to hash end of message, encrypt all, then send and check validity of hash in bank.py
         pass
     
