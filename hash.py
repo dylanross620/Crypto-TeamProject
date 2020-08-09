@@ -1,4 +1,5 @@
 from math import log2
+import secrets
 
 # This file is essentially just an implementation of FIPS 202
 # where the specifications for SHA3 are stated. I tried to keep
@@ -240,3 +241,33 @@ def sha256(msg: str) -> str:
     res = sponge(msg + [0,1], 256)
 
     return binary_to_string(res)
+
+hmac_keys = {}
+
+# Use HMAC to generate a mac for the given string
+# msg is a plaintext string
+# key is a hex string
+def hmac(msg: str, key: str) -> str:
+    B = 32
+
+    # Ensure key is right size
+    if len(key) > 2*B: # 2B because each byte in hex is 2 characters
+        key = sha256(key)
+    while len(key) < 2*B:
+        key += '00'
+    
+    # Check if key has been used before. If so, don't need to recalculate ipad and opad xors
+    if key in hmac_keys:
+        x_ipad, x_opad = hmac_keys[key]
+    else:
+        key_bytes = [int(key[i:i+2], 16) for i in range(0, len(key), 2)]
+        x_ipad = ''.join([format(a ^ 0x36, '02x') for a in key_bytes])
+        x_opad = ''.join([format(a ^ 0x5c, '02x') for a in key_bytes])
+
+        hmac_keys[key] = (x_ipad, x_opad)
+
+    return sha256(x_opad + sha256(x_ipad + msg))
+
+# Generate an authentication key to be used by hmac
+def generate_mac_key():
+    return format(secrets.randbits(32*8), '064x')

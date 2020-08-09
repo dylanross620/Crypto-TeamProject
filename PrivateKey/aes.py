@@ -304,8 +304,7 @@ def block_xor(block1: str, block2: str) -> str:
 # message is the message to be encrypted
 # key is the 256-bit key represented as a hex string (without leading '0x')
 # returns hex string of the encrypted message
-# if mac is True, then only the last block will be returned to be used for message authentication
-def encrypt(msg: str, key: str, mac: bool=False) -> str:
+def encrypt(msg: str, key: str) -> str:
     # Pad message
     while len(msg) % 16 != 0:
         msg += '\x00'
@@ -324,8 +323,6 @@ def encrypt(msg: str, key: str, mac: bool=False) -> str:
             block = block_xor(block, ciphers[-1]) # CBC
         ciphers.append(aes_encrypt_block(block, key))
 
-    if mac:
-        return ciphers[-1]
     return ''.join(ciphers)
 
 # Use AES256 to decrypt a message with a given key
