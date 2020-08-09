@@ -48,31 +48,7 @@ class Bank:
     def deposit(msg):
         pass
 
-    def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
-        self.client, self.clientaddr = self.s.accept()
-        clienthello = self.client.recv(1024)
-        clienthello = clienthello.decode('utf-8').split('-')
-        print(clienthello)
-        clientname = repr(clienthello[0]).strip("'")
-        atmprefs = json.loads(clienthello[1])
-        print(f"ATM user " + clientname + " has initiated handshake, hello to BANK server!")
-        atmprefs = [x.lower() for x in atmprefs]
-        common = list(set(self.methods) & set(atmprefs))
-        if len(common) == 0:
-            raise Exception("no common methods between atm/bank")
-        else:
-            self.scheme = common[0]
-        print(f"Handshake info --> common encryption scheme set to use {self.scheme}")
-        keypairs = None
-        if self.scheme == "rsa":
-            keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
-        else:
-            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",1024)
-        self.pubkey = keypairs[0]
-        self.privkey = keypairs[1]
-        self.client.send(self.scheme.encode('utf-8'))
-        #we need to recieve atm pubkey in 2 parts now
-        print("Handshake info --> recieving atm pubkey...")
+    def rec_atmpub_rsa(self):
         q1 = self.client.recv(4096)
         q1 = q1.decode('utf-8')
         if self.scheme == 'rsa':
@@ -144,6 +120,168 @@ class Bank:
         apubtmp = self.atmpubkey.strip("(").strip(")").split(",")
         apubtmp = [x.strip() for x in apubtmp] #take away tuple space or wierd stuff
         self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]))
+
+    def rec_atmpub_gamal(self):
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        print(repr(q1))
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good first eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("first eighth tampered".encode('utf-8'))
+            raise Exception("first eighth tampered")
+
+        self.atmpubkey = q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good second eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("second eighth tampered".encode('utf-8'))
+            raise Exception("second eighth tampered")
+
+        self.atmpubkey += q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good third eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("third eighth tampered".encode('utf-8'))
+            raise Exception("third eighth tampered")
+
+        self.atmpubkey += q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        print(len(q1))
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good fourth eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("fourth eighth tampered".encode('utf-8'))
+            raise Exception("fourth eighth tampered")
+
+        self.atmpubkey += q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        print(len(q1))
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good fifth eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("fifth eighth tampered".encode('utf-8'))
+            raise Exception("fifth eighth tampered")
+
+        self.atmpubkey += q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        print(len(q1))
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good sixth eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("sixth eighth tampered".encode('utf-8'))
+            raise Exception("sixth eighth tampered")
+
+        self.atmpubkey += q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        print(len(q1))
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good seventh eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("seventh eighth tampered".encode('utf-8'))
+            raise Exception("seventh eighth tampered")
+
+        self.atmpubkey += q1[0]
+
+        q1 = self.client.recv(4096)
+        q1 = q1.decode('utf-8')
+        print(len(q1))
+        q1tmp = q1.strip("(").strip(")").split(",")
+        q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+        q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+        q1 = elgamal.decrypt(q1tmp, self.privkey)
+        q1 = q1.split('-')
+        if hash.sha256(q1[0]) == q1[1]:
+            self.client.send("good eighth eighth recieved".encode('utf-8'))
+        else:
+            self.client.send("eighth eighth tampered".encode('utf-8'))
+            raise Exception("eighth eighth tampered")
+
+        self.atmpubkey += q1[0]
+        
+        apubtmp = self.atmpubkey.strip("(").strip(")").split(",")
+        apubtmp = [x.strip() for x in apubtmp] #take away tuple space or wierd stuff
+        self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]))
+
+    def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
+        self.client, self.clientaddr = self.s.accept()
+        clienthello = self.client.recv(1024)
+        clienthello = clienthello.decode('utf-8').split('-')
+        print(clienthello)
+        clientname = repr(clienthello[0]).strip("'")
+        atmprefs = json.loads(clienthello[1])
+        print(f"ATM user " + clientname + " has initiated handshake, hello to BANK server!")
+        atmprefs = [x.lower() for x in atmprefs]
+        common = list(set(self.methods) & set(atmprefs))
+        if len(common) == 0:
+            raise Exception("no common methods between atm/bank")
+        else:
+            self.scheme = common[0]
+        print(f"Handshake info --> common encryption scheme set to use {self.scheme}")
+        keypairs = None
+        if self.scheme == "rsa":
+            keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
+        else:
+            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",1024)
+        self.pubkey = keypairs[0]
+        self.privkey = keypairs[1]
+        self.client.send(self.scheme.encode('utf-8'))
+        #we need to recieve atm pubkey in 2 parts now
+        print("Handshake info --> recieving atm pubkey...")
+        
+        if self.scheme == 'rsa':
+            self.rec_atmpub_rsa()
+        else:
+            self.rec_atmpub_gamal()
             
         print("Handshake info --> atm pubkey successully recieved")
         print("Handshake info --> verifying bank to atm")

@@ -45,35 +45,10 @@ class ATM:
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         print("Handshake info --> sending over atm pubkey...")
-        pubkeystr = str(self.pubkey)
-        pkeylen = len(pubkeystr) // 4
-        print(pkeylen)
-        q1 = pubkeystr[0:pkeylen]
-        q2 = pubkeystr[pkeylen:(pkeylen*2)]
-        q3 = pubkeystr[(pkeylen*2):(pkeylen*3)]
-        q4 = pubkeystr[(pkeylen*3):]
-        q1 = q1 + '-' + hash.sha256(q1)
-        q2 = q2 + '-' + hash.sha256(q2)
-        q3 = q3 + '-' + hash.sha256(q3)
-        q4 = q4 + '-' + hash.sha256(q4)
-        if self.scheme == 'rsa':
-            q1 = rsa.encrypt(q1,self.bankpubkey)
-            q2 = rsa.encrypt(q2,self.bankpubkey)
-            q3 = rsa.encrypt(q3,self.bankpubkey)
-            q4 = rsa.encrypt(q4,self.bankpubkey)
+        if self.scheme == "rsa":
+            self.send_pub_rsa()
         else:
-            q1 = elgamal.encrypt(q1,self.bankpubkey)
-            q2 = elgamal.encrypt(q2,self.bankpubkey)
-            q3 = elgamal.encrypt(q3,self.bankpubkey)
-            q4 = elgamal.encrypt(q4,self.bankpubkey)
-        self.s.send(str(q1).encode('utf-8'))
-        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
-        self.s.send(str(q2).encode('utf-8'))
-        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
-        self.s.send(str(q3).encode('utf-8'))
-        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
-        self.s.send(str(q4).encode('utf-8'))
-        print(f"Handshake info --> bank replied {self.s.recv(1024).decode('utf-8')}")
+            self.send_pub_gamal()
         
         checkpw = self.s.recv(4096).decode('utf-8')
         if self.scheme == 'rsa':
@@ -98,11 +73,79 @@ class ATM:
         self.s.send(str(aestmp).encode('utf-8'))
         print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
         print("Handshake info --> ATM ready to go!")
-        
-    def send_user(): #need to hash, append to hash end of message, encrypt all, then send and check validity of hash in bank.py
-        pass
-    
-    def send_pass(): #need to hash, append to hash end of message, encrypt all, then send and check validity of hash in bank.py
+
+    def send_pub_gamal(self):
+        pubkeystr = str(self.pubkey)
+        pkeylen = len(pubkeystr) // 8
+        print(pkeylen)
+        q1 = pubkeystr[0:pkeylen]
+        q2 = pubkeystr[pkeylen:(pkeylen*2)]
+        q3 = pubkeystr[(pkeylen*2):(pkeylen*3)]
+        q4 = pubkeystr[(pkeylen*3):(pkeylen*4)]
+        q5 = pubkeystr[(pkeylen*4):(pkeylen*5)]
+        q6 = pubkeystr[(pkeylen*5):(pkeylen*6)]
+        q7 = pubkeystr[(pkeylen*6):(pkeylen*7)]
+        q8 = pubkeystr[(pkeylen*7):]
+        q1 = q1 + '-' + hash.sha256(q1)
+        q2 = q2 + '-' + hash.sha256(q2)
+        q3 = q3 + '-' + hash.sha256(q3)
+        q4 = q4 + '-' + hash.sha256(q4)
+        q5 = q5 + '-' + hash.sha256(q5)
+        q6 = q6 + '-' + hash.sha256(q6)
+        q7 = q7 + '-' + hash.sha256(q7)
+        q8 = q8 + '-' + hash.sha256(q8)
+        q1 = elgamal.encrypt(q1,self.bankpubkey)
+        q2 = elgamal.encrypt(q2,self.bankpubkey)
+        q3 = elgamal.encrypt(q3,self.bankpubkey)
+        q4 = elgamal.encrypt(q4,self.bankpubkey)
+        q5 = elgamal.encrypt(q5,self.bankpubkey)
+        q6 = elgamal.encrypt(q6,self.bankpubkey)
+        q7 = elgamal.encrypt(q7,self.bankpubkey)
+        q8 = elgamal.encrypt(q8,self.bankpubkey)
+        self.s.send(str(q1).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q2).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q3).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q4).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q5).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q6).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q7).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q8).encode('utf-8'))
+        print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+
+    def send_pub_rsa(self):
+        pubkeystr = str(self.pubkey)
+        pkeylen = len(pubkeystr) // 4
+        print(pkeylen)
+        q1 = pubkeystr[0:pkeylen]
+        q2 = pubkeystr[pkeylen:(pkeylen*2)]
+        q3 = pubkeystr[(pkeylen*2):(pkeylen*3)]
+        q4 = pubkeystr[(pkeylen*3):]
+        q1 = q1 + '-' + hash.sha256(q1)
+        q2 = q2 + '-' + hash.sha256(q2)
+        q3 = q3 + '-' + hash.sha256(q3)
+        q4 = q4 + '-' + hash.sha256(q4)
+        q1 = rsa.encrypt(q1,self.bankpubkey)
+        q2 = rsa.encrypt(q2,self.bankpubkey)
+        q3 = rsa.encrypt(q3,self.bankpubkey)
+        q4 = rsa.encrypt(q4,self.bankpubkey)
+        self.s.send(str(q1).encode('utf-8'))
+        print(f"Handshake info (rsa) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q2).encode('utf-8'))
+        print(f"Handshake info (rsa) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q3).encode('utf-8'))
+        print(f"Handshake info (rsa) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+        self.s.send(str(q4).encode('utf-8'))
+        print(f"Handshake info (rsa) --> bank replied {self.s.recv(1024).decode('utf-8')}")
+
+    def open_messaging(): #aes to encrypt user input and parse to pass to approprriate bank function
+        #ex usage: withdraw 1000, deposit 4000 (check vals to make sure its not negative/0 here)
         pass
 
 if __name__ == "__main__":
