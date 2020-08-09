@@ -27,7 +27,7 @@ class Bank:
         self.clientaddr = None
 
     def addhashedpassword(self, username: str, password: str) :
-        self.usertopass[username] = hash.sha256(password)
+        self.usertopass[username] = hash.sha1(password)
         open("local_storage/usertohashpass.txt", "w+").write(json.dumps(self.usertopass))
 
     def addusertomoney(self, username: str, amount: str): #adds info to runtime dict and dumps to file
@@ -47,13 +47,13 @@ class Bank:
         if int(self.usertomoney[usr]) - amt < 0:
             sendback += self.usertomoney[usr] + '-' + "cannot overdraw this account"
             sendback = str(self.counter) + '-' + sendback
-            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
         else:
             self.usertomoney[usr] = str(int(self.usertomoney[usr]) - amt)
             sendback += self.usertomoney[usr] + '-' + "withdraw successful"
             sendback = str(self.counter) + '-' + sendback
-            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
 
     def deposit(self,usr, amt):
@@ -61,14 +61,14 @@ class Bank:
             self.usertomoney[usr] = str(int(self.usertomoney[usr]) + amt)
             sendback += self.usertomoney[usr] + '-' + "deposit successful"
             sendback = str(self.counter) + '-' + sendback
-            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
 
     def check(self,usr):
             sendback = usr + "-"
             sendback += self.usertomoney[usr] + '-' + "check successful"
             sendback = str(self.counter) + '-' + sendback
-            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
             
     def post_handshake(self):
@@ -83,23 +83,23 @@ class Bank:
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
             cmd = cmd[1:]
-            if hash.sha256(againsthash) != chkhash:
+            if hash.sha1(againsthash) != chkhash:
                 sendback = "notverifieduser-0-msg integrity compromised"
                 sendback = str(self.counter) + '-' + sendback
-                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[0] not in list(self.usertopass.keys()):
                 sendback = "notverifieduser-0-username not known in bank"
                 sendback = str(self.counter) + '-' + sendback
-                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[1] != self.usertopass[cmd[0]]:
                 sendback = cmd[0] + "-"
                 sendback += self.usertomoney[usr] + '-' + "password not matching in bank"
                 sendback = str(self.counter) + '-' + sendback
-                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
             if cmd[2] == 'withdraw':
@@ -112,7 +112,7 @@ class Bank:
                 sendback = cmd[0] + "-"
                 sendback += self.usertomoney[usr] + '-' + "invalid command"
                 sendback = str(self.counter) + '-' + sendback
-                sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+                sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
             
         self.s.close()
@@ -128,7 +128,7 @@ class Bank:
             q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
             q1 = elgamal.decrypt(q1tmp, self.privkey)
         q1 = q1.split('-')
-        if hash.sha256(q1[0]) == q1[1]:
+        if hash.sha1(q1[0]) == q1[1]:
             self.client.send("good first quarter recieved".encode('utf-8'))
         else:
             self.client.send("first quarter tampered".encode('utf-8'))
@@ -144,7 +144,7 @@ class Bank:
             q2tmp = (int(q2tmp[0]), int(q2tmp[1])) 
             q2 = elgamal.decrypt(q2tmp, self.privkey)
         q2 = q2.split('-')
-        if hash.sha256(q2[0]) == q2[1]:
+        if hash.sha1(q2[0]) == q2[1]:
             self.client.send("good second quarter recieved".encode('utf-8'))
         else:
             self.client.send("second quarter tampered".encode('utf-8'))
@@ -160,7 +160,7 @@ class Bank:
             q3tmp = (int(q3tmp[0]), int(q3tmp[1])) 
             q3 = elgamal.decrypt(q3tmp, self.privkey)
         q3 = q3.split('-')
-        if hash.sha256(q3[0]) == q3[1]:
+        if hash.sha1(q3[0]) == q3[1]:
             self.client.send("good third quarter recieved".encode('utf-8'))
         else:
             self.client.send("third quarter tampered".encode('utf-8'))
@@ -176,7 +176,7 @@ class Bank:
             q4tmp = (int(q4tmp[0]), int(q4tmp[1])) 
             q4 = elgamal.decrypt(q4tmp, self.privkey)
         q4 = q4.split('-')
-        if hash.sha256(q4[0]) == q4[1]:
+        if hash.sha1(q4[0]) == q4[1]:
             self.client.send("good fourth quarter recieved".encode('utf-8'))
         else:
             self.client.send("fourth quarter tampered".encode('utf-8'))
@@ -200,7 +200,7 @@ class Bank:
             q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
             q1 = elgamal.decrypt(q1tmp, self.privkey)
             q1 = q1.split('-')
-            if hash.sha256(q1[0]) == q1[1]:
+            if hash.sha1(q1[0]) == q1[1]:
                 self.client.send(f"good block {z}/17 recieved".encode('utf-8'))
             else:
                 self.client.send(f"{z}/17 tampered".encode('utf-8'))
@@ -251,7 +251,7 @@ class Bank:
             checkpw = self.client.recv(4096).decode('utf-8')
             checkpw = rsa.decrypt(int(checkpw), self.privkey)
             checkpw = checkpw.split('-')
-            if hash.sha256(checkpw[0]) == checkpw[1] and checkpw[0] == self.usertopass[clientname]:
+            if hash.sha1(checkpw[0]) == checkpw[1] and checkpw[0] == self.usertopass[clientname]:
                 self.client.send("good pw check".encode('utf-8'))
             else:
                 self.client.send("pw check failed or msg tampered with".encode('utf-8'))
@@ -263,7 +263,7 @@ class Bank:
             checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
             checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
             checkpw = checkpw.split('-')
-            if hash.sha256(checkpw[0]) == checkpw[1]:
+            if hash.sha1(checkpw[0]) == checkpw[1]:
                 self.client.send("good pw check block 1/2".encode('utf-8'))
             else:
                 self.client.send("pw check failed or msg tampered with block 1/2".encode('utf-8'))
@@ -276,7 +276,7 @@ class Bank:
             checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
             checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
             checkpw = checkpw.split('-')
-            if hash.sha256(checkpw[0]) == checkpw[1]:
+            if hash.sha1(checkpw[0]) == checkpw[1]:
                 self.client.send("good pw check block 2/2".encode('utf-8'))
             else:
                 self.client.send("pw check failed or msg tampered with block 2/2".encode('utf-8'))
@@ -294,7 +294,7 @@ class Bank:
             tmpaes = self.client.recv(4096).decode('utf-8')
             tmpaes = rsa.decrypt(int(tmpaes), self.privkey)
             tmpaes = tmpaes.split('-')
-            if hash.sha256(tmpaes[0]) == tmpaes[1]:
+            if hash.sha1(tmpaes[0]) == tmpaes[1]:
                 print("Handshake info --> AES key recieved")
                 self.client.send("good AES key".encode('utf-8'))
                 self.aeskey = tmpaes[0]
@@ -308,7 +308,7 @@ class Bank:
             tmpaes1of2 = (int(tmpaes1of2[0]), int(tmpaes1of2[1])) 
             tmpaes1of2 = elgamal.decrypt(tmpaes1of2, self.privkey)
             tmpaes1of2 = tmpaes1of2.split('-')
-            if hash.sha256(tmpaes1of2[0]) == tmpaes1of2[1]:
+            if hash.sha1(tmpaes1of2[0]) == tmpaes1of2[1]:
                 print("Handshake info --> AES key block 1/2 recieved")
                 self.client.send("good block".encode('utf-8'))
                 self.aeskey += tmpaes1of2[0]
@@ -321,7 +321,7 @@ class Bank:
             tmpaes1of2 = (int(tmpaes1of2[0]), int(tmpaes1of2[1])) 
             tmpaes1of2 = elgamal.decrypt(tmpaes1of2, self.privkey)
             tmpaes1of2 = tmpaes1of2.split('-')
-            if hash.sha256(tmpaes1of2[0]) == tmpaes1of2[1]:
+            if hash.sha1(tmpaes1of2[0]) == tmpaes1of2[1]:
                 print("Handshake info --> AES key block 2/2 recieved")
                 self.client.send("good block".encode('utf-8'))
                 self.aeskey += tmpaes1of2[0]

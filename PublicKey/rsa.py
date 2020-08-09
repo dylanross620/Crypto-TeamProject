@@ -74,13 +74,13 @@ def decrypt(msg: int, priv_key: tuple) -> str:
 
 # Generate a signature for the given message
 def sign(msg: str, priv_key: tuple) -> int:
-    hashed = int(hash.sha256(msg), 16)
+    hashed = int(hash.sha1(msg), 16)
 
     return pow(hashed, priv_key[1], priv_key[0])
 
 # Verify a signature for the given message
 # returns true iff the signature is valid
 def verify_signature(signature: int, msg: str, pub_key: tuple) -> bool:
-    hashed = int(hash.sha256(msg), 16)
+    hashed = int(hash.sha1(msg), 16)
 
     return hashed == pow(signature, pub_key[1], pub_key[0])

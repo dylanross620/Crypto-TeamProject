@@ -84,7 +84,7 @@ def sign(msg: str, priv_key: tuple, pub_key: tuple) -> tuple:
     p, a = priv_key
     alpha = pub_key[1]
 
-    hashed = int(hash.sha256(msg), 16)
+    hashed = int(hash.sha1(msg), 16)
 
     s = 0
     r = 0
@@ -103,7 +103,7 @@ def sign(msg: str, priv_key: tuple, pub_key: tuple) -> tuple:
 def verify_signature(signature: tuple, msg: str, pub_key: tuple) -> bool:
     p, alpha, beta = pub_key
 
-    hashed = int(hash.sha256(msg), 16)
+    hashed = int(hash.sha1(msg), 16)
 
     r, s = signature
     if 0 >= r or r >= p or 0 >= s or s >= p-1:

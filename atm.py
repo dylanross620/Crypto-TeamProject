@@ -8,7 +8,7 @@ from PrivateKey import aes
 class ATM:
     def __init__(self, username, password, preflist = []):
         self.user = username
-        self.pw  = hash.sha256(password)
+        self.pw  = hash.sha1(password)
         self.aeskey = aes.generate_key()
         if len(preflist) == 0:
             raise Exception("need to have preferences as the user to compare to server...")
@@ -62,7 +62,7 @@ class ATM:
 
             sendstr = str(self.counter) + '-' + sendstr
             #in bank, verify the hash including all dashes except the one right before the sha
-            sendstr = aes.encrypt(sendstr + "-" + hash.sha256(sendstr),self.aeskey)
+            sendstr = aes.encrypt(sendstr + "-" + hash.sha1(sendstr),self.aeskey)
             self.s.send(sendstr.encode('utf-8'))
 
             bankret = self.s.recv(99999).decode('utf-8')#parse this out
@@ -73,7 +73,7 @@ class ATM:
             bankret.remove(chkhash)
             againsthash = '-'.join(bankret)
             bankret = bankret[1:]
-            if hash.sha256(againsthash) != chkhash:
+            if hash.sha1(againsthash) != chkhash:
                 print("bank return msg integrity compromised")
                 continue
             if bankret[0] != self.user:
@@ -110,14 +110,14 @@ class ATM:
         pkeylen = len(pubkeystr) // 16
         for z in range(0,17):
             q1 = pubkeystr[(pkeylen*z):(pkeylen*(z+1))]
-            q1 = q1 + '-' + hash.sha256(q1)
+            q1 = q1 + '-' + hash.sha1(q1)
             # print(f"lenq{z}: {len(q1)} --> q{z}: {q1}")
             q1 = elgamal.encrypt(q1,self.bankpubkey)
             self.s.send(str(q1).encode('utf-8'))
             print(f"Handshake info (gamal) --> bank replied {self.s.recv(1024).decode('utf-8')}")
 
         q1 = pubkeystr[(pkeylen*17):]
-        q1 = q1 + '-' + hash.sha256(q1)
+        q1 = q1 + '-' + hash.sha1(q1)
         # print(f"lenq{17}: {len(q1)} --> q{17}: {q1}")
         q1 = elgamal.encrypt(q1,self.bankpubkey)
         self.s.send(str(q1).encode('utf-8'))
@@ -127,8 +127,8 @@ class ATM:
         pwhash2 = self.pw
         pw1of2 = pwhash2[:len(pwhash2)//2]
         pw2of2 = pwhash2[len(pwhash2)//2:]
-        pw1of2 = pw1of2 + '-' + hash.sha256(pw1of2)
-        pw2of2 = pw2of2 + '-' + hash.sha256(pw2of2)
+        pw1of2 = pw1of2 + '-' + hash.sha1(pw1of2)
+        pw2of2 = pw2of2 + '-' + hash.sha1(pw2of2)
         pw1of2 = elgamal.encrypt(pw1of2, self.bankpubkey)
         pw2of2 = elgamal.encrypt(pw2of2, self.bankpubkey)
         self.s.send(str(pw1of2).encode('utf-8'))
@@ -140,8 +140,8 @@ class ATM:
         print("Handshake info --> password verified with bank")
         aestmp1of2 = self.aeskey[:len(self.aeskey)//2]
         aestmp2of2 = self.aeskey[len(self.aeskey)//2:]
-        aestmp1of2 = aestmp1of2 + '-' + hash.sha256(aestmp1of2)
-        aestmp2of2 = aestmp2of2 + '-' + hash.sha256(aestmp2of2)
+        aestmp1of2 = aestmp1of2 + '-' + hash.sha1(aestmp1of2)
+        aestmp2of2 = aestmp2of2 + '-' + hash.sha1(aestmp2of2)
         aestmp1of2 = elgamal.encrypt(aestmp1of2, self.bankpubkey)
         aestmp2of2 = elgamal.encrypt(aestmp2of2, self.bankpubkey)
         self.s.send(str(aestmp1of2).encode('utf-8'))
@@ -157,10 +157,10 @@ class ATM:
         q2 = pubkeystr[pkeylen:(pkeylen*2)]
         q3 = pubkeystr[(pkeylen*2):(pkeylen*3)]
         q4 = pubkeystr[(pkeylen*3):]
-        q1 = q1 + '-' + hash.sha256(q1)
-        q2 = q2 + '-' + hash.sha256(q2)
-        q3 = q3 + '-' + hash.sha256(q3)
-        q4 = q4 + '-' + hash.sha256(q4)
+        q1 = q1 + '-' + hash.sha1(q1)
+        q2 = q2 + '-' + hash.sha1(q2)
+        q3 = q3 + '-' + hash.sha1(q3)
+        q4 = q4 + '-' + hash.sha1(q4)
         q1 = rsa.encrypt(q1,self.bankpubkey)
         q2 = rsa.encrypt(q2,self.bankpubkey)
         q3 = rsa.encrypt(q3,self.bankpubkey)
@@ -176,12 +176,12 @@ class ATM:
 
         print("Handshake info --> starting password verification")
         pwhash2 = self.pw
-        pwhash2 = pwhash2 + '-' + hash.sha256(pwhash2)
+        pwhash2 = pwhash2 + '-' + hash.sha1(pwhash2)
         pwhash2 = rsa.encrypt(pwhash2, self.atmpubkey)
         self.s.send(str(pwhash2).encode('utf-8'))
         print(f"Handshake info --> bank responded with {self.s.recv(1024).decode('utf-8')}")
         print("Handshake info --> password verified with bank")
-        aestmp = self.aeskey + '-' + hash.sha256(self.aeskey)
+        aestmp = self.aeskey + '-' + hash.sha1(self.aeskey)
         aestmp = rsa.encrypt(aestmp, self.bankpubkey)
         self.s.send(str(aestmp).encode('utf-8'))
         print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
