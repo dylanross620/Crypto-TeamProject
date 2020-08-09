@@ -30,6 +30,49 @@ class ATM:
     def deposit_money(self):
         pass
 
+    def post_handshake(self): #takes in user input to interact with bank indefinitely
+        print("ATM")
+        print("Example withdraw: 'withdraw [positive_int]'")
+        print("Example deposit: 'despost [positive_int]")
+        print("To close ATM, type q")
+        print("---------------------------------------------------")
+        while True:
+            inp = input("command: ")
+            inp = inp.strip()
+            if inp == 'q':
+                break
+            inp = inp.split(' ')
+            sendstr = self.user + '-' + self.pw + '-'
+            if inp[0].lower() == 'withdraw':
+                sendstr += inp[0].lower()
+            elif inp[0].lower() == 'deposit':
+                sendstr += inp[0].lower()
+            else:
+                print("not a valid operation supported by bank")
+                continue
+            if inp[1].isnumeric():
+                sendstr += '-' + inp[1]
+            else:
+                print("invalid money amount")
+            #in bank, verify the hash including all dashes except the one right before the sha
+            sendstr = aes.encrypt(sendstr + "-" + hash.sha256(sendstr),self.aeskey)
+            self.s.send(sendstr.encode('utf-8'))
+
+            bankret = self.s.recv(99999).decode('utf-8')#parse this out
+            bankret = aes.decrypt(bankret,self.aeskey)
+            bankret = bankret.split('-')
+            chkhash = bankret[-1]
+            bankret.remove(chkhash)
+            againsthash = '-'.join(bankret)
+            if hash.sha256(againsthash) != chkhash:
+                print("bank return msg integrity compromised")
+                continue
+            if bankret[0] != self.user:
+                print("bank user return value tampered with")
+                continue
+            print(f"bank responded with '{bankret[2]}' to the request, money in account: {bankret[1]}") 
+        self.s.close()
+
     def starthandshake(self):
         self.s.send((self.user + '-' + str(json.dumps(self.prefs))).encode('utf-8'))
         bankhello = self.s.recv(4096)
@@ -51,6 +94,7 @@ class ATM:
             self.send_pub_gamal()
 
         print("Handshake info --> ATM ready to go!")
+        self.post_handshake()
 
     def send_pub_gamal(self):
         pubkeystr = str(self.pubkey)
@@ -113,9 +157,6 @@ class ATM:
         print(f"Handshake info --> AES block 1/2 sent, bank replied {self.s.recv(1024).decode('utf-8')}") #bank replied good block
         self.s.send(str(aestmp2of2).encode('utf-8'))
         print(f"Handshake info --> AES block 2/2 sent, bank replied {self.s.recv(1024).decode('utf-8')}") #bank replied good block
-        
-        
-        
 
     def send_pub_rsa(self):
         pubkeystr = str(self.pubkey)

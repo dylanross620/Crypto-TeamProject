@@ -39,14 +39,56 @@ class Bank:
         self.usertomoney[username] = amount
         open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
 
-    def withdraw(msg): 
+    def withdraw(self,usr, amt): 
         #we include username/pw in the msg so we can auth and not just use self.clientname blindly (incase blackhat sends packets)
-        #msg format --> username-pw-money-msghash
-        #sends back username-remaining_money-msghash
-        pass
+        #msg format --> [username-pw-withdraw/deposit-money]-msghash
+        #sends back username-remaining_money-actualmsg-msghash
+        sendback = usr + "-"
+        if int(self.usertomoney[usr]) - amt < 0:
+            sendback += self.usertomoney[usr] + '-' + "cannot overdraw this account"
+            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        else:
+            self.usertomoney[usr] = str(int(self.usertomoney[usr]) - amt)
+            sendback += self.usertomoney[usr] + '-' + "withdraw successful"
+            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
 
-    def deposit(msg):
-        pass
+    def deposit(self,usr, amt):
+            sendback = usr + "-"
+            self.usertomoney[usr] = str(int(self.usertomoney[usr]) + amt)
+            sendback += self.usertomoney[usr] + '-' + "deposit successful"
+            sendback = aes.encrypt(sendback + '-' + hash.sha256(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+            
+    def post_handshake(self):
+        while True:
+            cmd = self.client.recv(4096).decode('utf-8')
+            if len(cmd) == 0:
+                break
+            cmd = aes.decrypt(cmd,self.aeskey)
+            cmd = cmd.split('-')
+            chkhash = cmd[-1]
+            cmd.remove(chkhash)
+            againsthash = '-'.join(cmd)
+            if hash.sha256(againsthash) != chkhash:
+                self.client.send("msg integrity compromised".encode('utf-8'))
+                continue
+            if cmd[0] not in list(self.usertopass.keys()):
+                self.client.send("username not known in bank")
+                continue
+            if cmd[1] != self.usertopass[cmd[0]]:
+                self.client.send("password not matching in bank")
+                continue
+            if cmd[2] == 'withdraw':
+                self.withdraw(cmd[0],int(cmd[3]))
+                
+            elif cmd[2] == 'deposit':
+                self.deposit(cmd[0],int(cmd[3]))
+            else:
+                self.client.send("invalid command".encode('utf-8'))
+            
+        self.s.close()
 
     def rec_atmpub_rsa(self):
         q1 = self.client.recv(4096)
@@ -238,8 +280,8 @@ class Bank:
                 self.client.send("bad block".encode('utf-8'))
                 raise Exception("AES key tampered with")
 
-
         print("Handshake info --> Bank ready to go!")
+        self.post_handshake()
 
 if __name__ == "__main__":
     testbank = Bank()
