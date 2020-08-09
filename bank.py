@@ -2,7 +2,7 @@ import json
 import hash
 import socket
 import select
-import threading
+import ast
 from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
@@ -42,9 +42,10 @@ class Bank:
         self.client, self.clientaddr = self.s.accept()
         clienthello = self.client.recv(1024)
         clienthello = clienthello.decode('utf-8').split('-')
+        print(clienthello)
         clientname = repr(clienthello[0]).strip("'")
-        atmprefs = eval(clienthello[1])
-        print("ATM user " + clientname + " has initiated handshake, hello to BANK server!")
+        atmprefs = json.loads(clienthello[1])
+        print(f"ATM user " + clientname + " has initiated handshake, hello to BANK server!")
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
         if len(common) == 0:
@@ -56,7 +57,7 @@ class Bank:
         if self.scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
         else:
-            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",4096)
+            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",2048)
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         self.client.send(self.scheme.encode('utf-8'))
@@ -67,7 +68,10 @@ class Bank:
         if self.scheme == 'rsa':
             q1 = rsa.decrypt(int(q1), self.privkey)
         else:
-            q1 = elgamal.decrypt(eval(q1), self.privkey)
+            q1tmp = q1.strip("(").strip(")").split(",")
+            q1tmp = [x.strip() for x in q1tmp] #take away tuple space or wierd stuff
+            q1tmp = (int(q1tmp[0]), int(q1tmp[1])) 
+            q1 = elgamal.decrypt(q1tmp, self.privkey)
         q1 = q1.split('-')
         if hash.sha256(q1[0]) == q1[1]:
             self.client.send("good first quarter recieved".encode('utf-8'))
@@ -80,7 +84,10 @@ class Bank:
         if self.scheme == 'rsa':
             q2 = rsa.decrypt(int(q2), self.privkey)
         else:
-            q2 = elgamal.decrypt(eval(q2), self.privkey)
+            q2tmp = q2.strip("(").strip(")").split(",")
+            q2tmp = [x.strip() for x in q2tmp] #take away tuple space or wierd stuff
+            q2tmp = (int(q2tmp[0]), int(q2tmp[1])) 
+            q2 = elgamal.decrypt(q2tmp, self.privkey)
         q2 = q2.split('-')
         if hash.sha256(q2[0]) == q2[1]:
             self.client.send("good second quarter recieved".encode('utf-8'))
@@ -93,7 +100,10 @@ class Bank:
         if self.scheme == 'rsa':
             q3 = rsa.decrypt(int(q3), self.privkey)
         else:
-            q3 = elgamal.decrypt(eval(q3), self.privkey)
+            q3tmp = q3.strip("(").strip(")").split(",")
+            q3tmp = [x.strip() for x in q3tmp] #take away tuple space or wierd stuff
+            q3tmp = (int(q3tmp[0]), int(q3tmp[1])) 
+            q3 = elgamal.decrypt(q3tmp, self.privkey)
         q3 = q3.split('-')
         if hash.sha256(q3[0]) == q3[1]:
             self.client.send("good third quarter recieved".encode('utf-8'))
@@ -106,7 +116,10 @@ class Bank:
         if self.scheme == 'rsa':
             q4 = rsa.decrypt(int(q4), self.privkey)
         else:
-            q4 = elgamal.decrypt(eval(q4), self.privkey)
+            q4tmp = q4.strip("(").strip(")").split(",")
+            q4tmp = [x.strip() for x in q4tmp] #take away tuple space or wierd stuff
+            q4tmp = (int(q4tmp[0]), int(q4tmp[1])) 
+            q4 = elgamal.decrypt(q4tmp, self.privkey)
         q4 = q4.split('-')
         if hash.sha256(q4[0]) == q4[1]:
             self.client.send("good fourth quarter recieved".encode('utf-8'))
@@ -118,7 +131,10 @@ class Bank:
         self.atmpubkey += q2[0]
         self.atmpubkey += q3[0]
         self.atmpubkey += q4[0]
-        self.atmpubkey = eval(self.atmpubkey)
+        apubtmp = self.atmpubkey.strip("(").strip(")").split(",")
+        apubtmp = [x.strip() for x in apubtmp] #take away tuple space or wierd stuff
+        self.atmpubkey = (int(apubtmp[0]), int(apubtmp[1]))
+            
         print("Handshake info --> atm pubkey successully recieved")
         print("Handshake info --> verifying bank to atm")
         if clientname not in list(self.usertopass.keys()):
@@ -136,7 +152,10 @@ class Bank:
         if self.scheme == 'rsa':
             tmpaes = rsa.decrypt(int(tmpaes), self.privkey)
         else:
-            tmpaes = elgamal.decrypt(eval(tmpaes), self.privkey)
+            atmpaes = tmpaes.strip("(").strip(")").split(",")
+            atmpaes = [x.strip() for x in atmpaes] #take away tuple space or wierd stuff
+            atmpaes = (int(atmpaes[0]), int(atmpaes[1]))
+            tmpaes = elgamal.decrypt(atmpaes, self.privkey)
         tmpaes = tmpaes.split('-')
         if hash.sha256(tmpaes[0]) == tmpaes[1]:
             print("Handshake info --> AES key recieved")
@@ -145,6 +164,8 @@ class Bank:
         else:
             self.client.send("AES key tampered with".encode('utf-8'))
             raise Exception("AES key tampered with")
+
+
 if __name__ == "__main__":
     testbank = Bank()
     # testatm = ATM("testuser","testpass", ['rsa'])

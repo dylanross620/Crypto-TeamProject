@@ -1,7 +1,7 @@
 import json
 import hash
 import socket
-import select
+import ast
 from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
@@ -31,7 +31,7 @@ class ATM:
         pass
 
     def starthandshake(self):
-        self.s.send((self.user + '-' + str(self.prefs)).encode('utf-8'))
+        self.s.send((self.user + '-' + str(json.dumps(self.prefs))).encode('utf-8'))
         bankhello = self.s.recv(4096)
         self.scheme = bankhello.decode('utf-8')
         if self.scheme == "rsa":
@@ -39,8 +39,8 @@ class ATM:
             bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
             self.bankpubkey = bkeypairs[0] # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
         else:
-            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
-            bkeypairs = rsa.load_keys("local_storage/bank-elgamal.txt",4096)
+            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",2048)
+            bkeypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",2048)
             self.bankpubkey = bkeypairs[0] # see above
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
@@ -79,7 +79,10 @@ class ATM:
         if self.scheme == 'rsa':
             checkpw = rsa.decrypt(int(checkpw), self.privkey)
         else:
-            checkpw = elgamal.decrypt(eval(checkpw), self.privkey)
+            checkpwtmp = checkpw.strip("(").strip(")").split(",")
+            checkpwtmp = [x.strip() for x in checkpwtmp] #take away tuple space or wierd stuff
+            checkpwtmp = (int(checkpwtmp[0]), int(checkpwtmp[1])) 
+            checkpw = elgamal.decrypt(checkpwtmp, self.privkey)
         checkpw = checkpw.split('-')
         if hash.sha256(checkpw[0]) == checkpw[1] and checkpw[0] == self.pw:
             self.s.send("good pw check".encode('utf-8'))
@@ -95,29 +98,6 @@ class ATM:
         self.s.send(str(aestmp).encode('utf-8'))
         print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
 
-    def key_setup(self, bpubkey):
-        if self.scheme == None:
-            raise Exception("need to assign common scheme in atm!")
-        keypairs = None
-        if self.scheme == "rsa":
-            keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
-            bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
-            self.bankpubkey = bkeypairs[0]
-        else:
-            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",4096)
-            bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
-            self.bankpubkey = bkeypairs[0]
-        self.pubkey = keypairs[0]
-        self.privkey = keypairs[1]
-        self.bankpubkey = bpubkey
-        ekey = None
-        if self.scheme == "rsa":
-            ekey = rsa.encrypt(self.aeskey + hash.sha256(self.aeskey),self.bankpubkey)
-        else:
-            ekey = elgamal.encrypt(self.aeskey + hash.sha256(self.aeskey), self.bankpubkey)
-
-        return ekey #this is being sent across the network, could intercept here before bank recieves...
-
     def send_user(): #need to hash, append to hash end of message, encrypt all, then send and check validity of hash in bank.py
         pass
     
@@ -125,7 +105,7 @@ class ATM:
         pass
 
 if __name__ == "__main__":
-    atmtest = ATM("Alex","alexpassword",["rsa"])
-    # atmtest2 = ATM("Owen","owenpassword",["elgamal"])
+    # atmtest = ATM("Alex","alexpassword",["rsa"])
+    atmtest2 = ATM("Owen","owenpassword",["elgamal"])
     # testatm = ATM("Owen","testpass", ['rsa'])
-    atmtest.starthandshake() 
+    atmtest2.starthandshake() 

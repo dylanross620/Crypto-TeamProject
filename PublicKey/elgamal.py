@@ -35,7 +35,6 @@ def load_keys(filename: str, bitsize: int) -> tuple:
 def generate_keys(bitsize: int) -> tuple:
     # Generate group Zp
     p = 4
-    p1, p2 = 1, 1
     while not utils.is_prime(p) or p >= 2**bitsize or p < 2**(bitsize-1):
         p = 2 * utils.generate_prime(bitsize-1) + 1 # make p-1 have large factor and allow us to already know its factorization
 
