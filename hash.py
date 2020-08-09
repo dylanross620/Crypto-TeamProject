@@ -260,11 +260,9 @@ def hmac(msg: str, key: str) -> str:
     if key in hmac_keys:
         x_ipad, x_opad = hmac_keys[key]
     else:
-        ipad = [0x36]*B
-        opad = [0x5c]*B
         key_bytes = [int(key[i:i+2], 16) for i in range(0, len(key), 2)]
-        x_ipad = ''.join([format(a ^ b, '02x') for a, b in zip(ipad, key_bytes)])
-        x_opad = ''.join([format(a ^ b, '02x') for a, b in zip(opad, key_bytes)])
+        x_ipad = ''.join([format(a ^ 0x36, '02x') for a in key_bytes])
+        x_opad = ''.join([format(a ^ 0x5c, '02x') for a in key_bytes])
 
         hmac_keys[key] = (x_ipad, x_opad)
 
