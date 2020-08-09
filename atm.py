@@ -40,7 +40,7 @@ class ATM:
             self.bankpubkey = bkeypairs[0] # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
         else:
             keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",2048)
-            bkeypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",2048)
+            bkeypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",1024)
             self.bankpubkey = bkeypairs[0] # see above
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]

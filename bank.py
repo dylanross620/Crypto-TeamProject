@@ -57,7 +57,7 @@ class Bank:
         if self.scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
         else:
-            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",2048)
+            keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",1024)
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         self.client.send(self.scheme.encode('utf-8'))
