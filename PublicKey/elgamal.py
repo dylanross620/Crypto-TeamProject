@@ -100,7 +100,7 @@ def sign(msg: str, priv_key: tuple, pub_key: tuple) -> tuple:
 
 # Uses the public key to verify an elgamal signature and its corresponding message
 # returns true iff the signature is valid
-def verify_signature(signature: tuple, pub_key: tuple, msg: str) -> bool:
+def verify_signature(signature: tuple, msg: str, pub_key: tuple) -> bool:
     p, alpha, beta = pub_key
 
     hashed = int(hash.sha256(msg), 16)
