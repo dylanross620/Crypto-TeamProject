@@ -150,7 +150,7 @@ class Bank:
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
         if len(common) == 0:
-            self.s.close()
+            self.client.close()
             raise Exception("no common methods between atm/bank")
         else:
             self.scheme = common[0]
@@ -186,6 +186,22 @@ class Bank:
         print("Handshake info --> bank calculated aes/mac keys from DH exchange")
         print(f"Handshake info --> Bank ready to go, atm replied {aes.decrypt(self.client.recv(1024).decode('utf-8'),self.aeskey)}")
         self.client.send((aes.encrypt("finished",self.aeskey)).encode('utf-8'))
+
+        # Challenge client to see if they're an ATM
+        client_keyname = aes.decrypt(self.client.recv(1024).decode('utf-8'), self.aeskey)
+        challenge = format(secrets.randbits(20*8), '040x')
+        if self.scheme == 'rsa':
+            client_pubkey = rsa.load_public_key(f"local_storage/{client_keyname}-rsa.pub")
+            challenge_encrypted = rsa.encrypt(challenge, client_pubkey)
+        else:
+            client_pubkey = elgamal.load_public_key(f"local_storage/{client_keyname}-elgamal.pub")
+            challenge_encrypted = elgamal.encrypt(challenge, client_pubkey)
+        self.client.send(aes.encrypt(str(challenge_encrypted), self.aeskey).encode('utf-8')) 
+        client_response = aes.decrypt(self.client.recv(1024).decode('utf-8'), self.aeskey)
+        if client_response != hash.sha1(challenge + self.aeskey):
+            self.client.close()
+            raise Exception("client is not an atm")
+
         self.post_handshake()
 
 if __name__ == "__main__":
