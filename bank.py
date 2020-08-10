@@ -73,6 +73,30 @@ class Bank:
             self.client.send(sendback.encode('utf-8'))
             
     def post_handshake(self):
+        count = self.client.recv(4096).decode('utf-8')
+        count = aes.decrypt(count,self.aeskey)
+        count = count.split('-')
+        chkhash = count[-1]
+        count.remove(chkhash)
+        againsthash = '-'.join(count)
+        if hash.sha1(againsthash) != chkhash:
+            sendback = "notverifieduser-0-msg integrity compromised"
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        if count[1] not in list(self.usertopass.keys()):
+            sendback = "notverifieduser-0-username not known in bank"
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        if count[2] != self.usertopass[count[1]]:
+            sendback = count[1] + "-"
+            sendback += self.usertomoney[usr] + '-' + "password not matching in bank"
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        self.counter = int(count[0]) + 1
+        sendback = str(self.counter) + '-' + count[1] + "-" + "counter exchange successful"
+        sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+        self.client.send(sendback.encode('utf-8'))
+
         while True:
             cmd = self.client.recv(4096).decode('utf-8')
             if len(cmd) == 0:

@@ -2,6 +2,7 @@ import json
 import hash
 import socket
 import ast
+import secrets
 from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
@@ -34,6 +35,28 @@ class ATM:
         print("Example check: 'check balance'")
         print("To close ATM, type q")
         print("---------------------------------------------------")
+        self.counter = secrets.randbelow(pow(2, 2048))
+        sendstr = str(self.counter) + '-' + self.user + '-' + self.pw
+        sendstr = aes.encrypt(sendstr + "-" + hash.sha1(sendstr),self.aeskey)
+        self.s.send(sendstr.encode('utf-8'))
+
+        bankret = self.s.recv(99999).decode('utf-8')#parse this out
+        bankret = aes.decrypt(bankret,self.aeskey)
+        bankret = bankret.split('-')
+        try:
+            self.countercheck(bankret)
+        except Exception as e:
+            print(str(e))
+        chkhash = bankret[-1]
+        bankret.remove(chkhash)
+        againsthash = '-'.join(bankret)
+        bankret = bankret[1:]
+        if hash.sha1(againsthash) != chkhash:
+            print("bank return msg integrity compromised")
+        if bankret[0] != self.user:
+            print("bank user return value tampered with")
+        print(f"Counter set, bank replied with '{bankret[1]}'")
+
         while True:
             inp = input("command: ")
             inp = inp.strip()
