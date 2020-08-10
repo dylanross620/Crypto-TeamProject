@@ -33,6 +33,7 @@ class ATM:
 
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         print("ATM")
+        print("Example login(atm will try to verify with your initalized user/pass): LOGIN")
         print("Example withdraw: 'withdraw [positive_int]'")
         print("Example deposit: 'deposit [positive_int]'")
         print("Example check: 'check balance'")
@@ -43,31 +44,32 @@ class ATM:
             inp = inp.strip()
             if inp == 'q':
                 break
-            inp = inp.split(' ')
-            sendstr = self.user + '-' + self.pw + '-'
-            if len(inp) != 2:
-                print("not a valid operation supported by bank")
-                continue
-            if inp[0].lower() == 'withdraw':
-                sendstr += inp[0].lower()
-            elif inp[0].lower() == 'deposit':
-                sendstr += inp[0].lower()
-            elif inp[0].lower() == 'check':
-                sendstr += inp[0].lower()
+            sendstr = self.user + '-'
+            if inp.lower() == 'login':
+                sendstr += inp.lower() + '-' + self.pw
             else:
-                print("not a valid operation supported by bank")
-                continue
-            if inp[1].isnumeric() and int(inp[1]) > 0:
-                sendstr += '-' + inp[1]
-            elif inp[1].lower() == 'balance':
-                sendstr += '-' + inp[1]
-            else:
-                print("invalid money amount")
-                continue
-
+                inp = inp.split(' ')
+                if len(inp) != 2:
+                    print("not a valid operation supported by bank")
+                    continue
+                if inp[0].lower() == 'withdraw':
+                    sendstr += inp[0].lower()
+                elif inp[0].lower() == 'deposit':
+                    sendstr += inp[0].lower()
+                elif inp[0].lower() == 'check':
+                    sendstr += inp[0].lower()
+                else:
+                    print("not a valid operation supported by bank")
+                    continue
+                if inp[1].isnumeric() and int(inp[1]) > 0:
+                    sendstr += '-' + inp[1]
+                elif inp[1].lower() == 'balance':
+                    sendstr += '-' + inp[1]
+                else:
+                    print("invalid money amount")
+                    continue
             sendstr = str(self.counter) + '-' + sendstr
-            #in bank, verify the hash including all dashes except the one right before the sha
-            sendstr = aes.encrypt(sendstr + "-" + hash.sha1(sendstr),self.aeskey)
+            sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr,self.mackey),self.aeskey)
             self.s.send(sendstr.encode('utf-8'))
 
             bankret = self.s.recv(99999).decode('utf-8')#parse this out
@@ -82,11 +84,8 @@ class ATM:
             bankret.remove(chkhash)
             againsthash = '-'.join(bankret)
             bankret = bankret[1:]
-            if hash.sha1(againsthash) != chkhash:
+            if hash.hmac(againsthash,self.mackey) != chkhash:
                 print("bank return msg integrity compromised")
-                continue
-            if bankret[0] != self.user:
-                print("bank user return value tampered with")
                 continue
             print(f"bank responded with '{bankret[2]}' to the request, money in account: {bankret[1]}") 
         self.s.close()
@@ -122,6 +121,7 @@ class ATM:
             self.s.send("signature verify success".encode('utf-8'))
         else:
             self.s.send("signature verify failed".encode('utf-8'))
+            self.s.close()
             raise Exception("signature verify failed")
         self.s.recv(4096) #formatting
         print("Handshake info --> bank signature verified, DH parameters recieved")
