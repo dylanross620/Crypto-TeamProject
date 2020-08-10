@@ -227,7 +227,7 @@ class Bank:
         self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
         self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
         self.serverrandom = secrets.token_bytes(32)
-        clisign = str(clirand) + '-' + str(self.serverrandom) + '-' + str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))
+        clisign = str(clirand) + '-' + str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))
         clie = None
         if self.scheme == 'rsa':
             clie = rsa.sign(clisign,self.privkey)
@@ -238,8 +238,7 @@ class Bank:
         self.client.send(str(clie).encode('utf-8'))
         print(f"Handshake info --> client says {self.client.recv(4096).decode('utf-8')}")
         self.client.send("breaker".encode('utf-8'))#formatting
-        cliplain = self.client.recv(99999).decode('utf-8')
-        cliplain = cliplain.split('-')
+        cliplain = clirand.split('-')
         self.aeskey = pow(int(cliplain[0]),self.dhprivateaes,self.p) % pow(2,256)
         self.mackey = pow(int(cliplain[1]),self.dhprivatemac,self.p) % pow(2,256)
         self.aeskey = format(self.aeskey, '064x')
@@ -267,14 +266,4 @@ class Bank:
 
 if __name__ == "__main__":
     testbank = Bank()
-    # testatm = ATM("testuser","testpass", ['rsa'])
-    # testatm.starthandshake() 
     testbank.starthandshake()
-    # testatm.starthandshake()
-    print(testbank.usertopass)
-    print(testbank.usertomoney)
-    # test1 = threading.Thread(name='test1', target = testatm.starthandshake)
-    # test2 = threading.Thread(name='test2', target = testbank.starthandshake)
-    # test1.start()
-    # test2.start()
-    # print(testbank.keypairs)

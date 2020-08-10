@@ -161,8 +161,13 @@ class ATM:
         self.privkey = keypairs[1]
         print("Handshake info --> sending client random")
         self.clientrandom = secrets.token_bytes(32)
-        self.s.send(str(self.clientrandom).encode('utf-8'))
+        self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
+        self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
+        dh_message = str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))
+        print(dh_message)
+        self.s.send(dh_message.encode('utf-8'))
         clirandplain = self.s.recv(99999).decode('utf-8')
+        print(clirandplain)
         self.s.send("recieved plaintext signature".encode('utf-8'))
         clirandsign = self.s.recv(4096).decode('utf-8')
         if self.scheme == 'rsa':
@@ -173,7 +178,8 @@ class ATM:
             clirandsign = (int(clirandsign[0]), int(clirandsign[1]))
             clirandsign = elgamal.verify_signature(clirandsign,clirandplain,self.bankpubkey)
 
-        if clirandsign:
+        clirandplain = clirandplain.split('-')
+        if clirandsign and (clirandplain[0] + '-' + clirandplain[1]) == dh_message:
             self.s.send("signature verify success".encode('utf-8'))
         else:
             self.s.send("signature verify failed".encode('utf-8'))
@@ -181,10 +187,6 @@ class ATM:
             raise Exception("signature verify failed")
         self.s.recv(4096) #formatting
         print("Handshake info --> bank signature verified, DH parameters recieved")
-        self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
-        self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
-        self.s.send((str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))).encode('utf-8'))
-        clirandplain = clirandplain.split('-')
         # self.aeskey = aes.generate_key()
         # self.mackey = hash.generate_mac_key()
         self.aeskey = pow(int(clirandplain[-2]),self.dhprivateaes,self.p) % pow(2,256)
