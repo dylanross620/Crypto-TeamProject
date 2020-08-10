@@ -35,7 +35,7 @@ class ATM:
 
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         print("ATM")
-        print("Example login(atm will try to verify with your initalized user/pass): LOGIN")
+        print("Example login: LOGIN")
         print("Example withdraw: 'withdraw [positive_int]'")
         print("Example deposit: 'deposit [positive_int]'")
         print("Example check: 'check balance'")
