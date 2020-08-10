@@ -43,7 +43,15 @@ Done by Dylan Ross\\
 		To understand why this works, recall the construction of the public key and the ciphertext. The above formula for recovering the message is the equivalent to $m\beta^k*((\alpha^k)^a)^{-1}
 		\text{ mod }p$. Because $\beta\equiv\alpha^a\text{ mod }p$, this is the same as $m(\alpha^a)^k*((\alpha^k)^a)^{-1}=m\alpha^{ak}*(\alpha^{ak})^{-1}\equiv m\text{ mod }p$.
 
-	\subsection{Security Concerns}\label{sec:elgamal-security}
+	\subsection{Message Signatures}\label{sec:elgamal-sign}
+		Like RSA, ElGamal can also be used to generate signatures for a message. Given the private key $a$, prime modulus $p$, and generator $\alpha$, a signature for message $m$ can be constructed
+		as follows. First, we will define $H(m)$ to be the hash of $m$ using some cryptographic hash function. First, the signer generates a random integer $k$ such that $1<k<p-1$ and
+		$k$ is coprime to $p-1$. They can then use $k$ to compute $r\equiv g^k\text{ mod }p$ and $s=(H(m)-xr)k^{-1}\text{ mod }p$. The signature consists of the tuple ($r$, $s$).\\
+
+		In order to verify this signature for message $m$, a verifier can use the signer's $\text{public key}=(p, \alpha, \beta)$ to test if $g^{H(m)}\equiv y^rr^s\text{ mod }p$. If this condition
+		holds, the the signature is valid.
+
+	\subsection{Security Measures in Implementation}\label{sec:elgamal-security}
 		While ElGamal does not have as many well-documented potential pitfalls to fall into during implementation as RSA does, it still has some points to be careful of. Notably, the security of the
 		scheme relies on the discrete logarithm problem, but this problem can be solved efficiently if $p-1$ only has small factors. In order to prevent this from happening, we generated $p$ of a
 		desired bitlength $n$ by generating a random prime $q$ of bitlength $n-1$ until $p=2q+1$ was prime. However, this led to a large time for key generation due to the linear time complexity
