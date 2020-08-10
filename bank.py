@@ -139,11 +139,13 @@ class Bank:
                     sendback = str(self.counter) + '-' + sendback
                     sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback,self.mackey),self.aeskey)
                     self.client.send(sendback.encode('utf-8'))
+                    continue
                 if cmd[2] != self.usertopass[cmd[0]]:
                     sendback = cmd[0] + "-0-password not matching in bank"
                     sendback = str(self.counter) + '-' + sendback
                     sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback,self.mackey),self.aeskey)
                     self.client.send(sendback.encode('utf-8'))
+                    continue
                 loggedin = True
                 loginname = cmd[0]
                 sendback = loginname + "-"

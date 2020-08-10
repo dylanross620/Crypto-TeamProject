@@ -63,6 +63,8 @@ class ATM:
             print("bank user return value tampered with")
         print(f"Counter set, bank replied with '{bankret[1]}'")
 
+        loggedin = False
+        loggingin = False
         while True:
             inp = input("command: ")
             inp = inp.strip()
@@ -70,7 +72,13 @@ class ATM:
                 break
             sendstr = self.user + '-'
             if inp.lower() == 'login':
-                sendstr += inp.lower() + '-' + self.pw
+                if loggedin:
+                    print("already logged in")
+                    continue
+                username = input("username: ")
+                password = input("password: ")
+                sendstr = username + '-' + inp.lower() + '-' + hash.sha1(password)
+                # sendstr += inp.lower() + '-' + self.pw
             else:
                 inp = inp.split(' ')
                 if len(inp) != 2:
@@ -112,6 +120,8 @@ class ATM:
                 print("bank return msg integrity compromised")
                 continue
             print(f"bank responded with '{bankret[2]}' to the request, money in account: {bankret[1]}") 
+            if bankret[2] == "login successful":
+                loggedin = True
         self.s.close()
 
     def starthandshake(self):
