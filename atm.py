@@ -128,8 +128,8 @@ class ATM:
         clirandplain = clirandplain.split('-')
         self.aeskey = pow(int(clirandplain[-2]),self.dhprivateaes,self.p) % pow(2,256)
         self.mackey = pow(int(clirandplain[-1]),self.dhprivatemac,self.p) % pow(2,256)
-        self.aeskey = str(hex(self.aeskey))[2:]
-        self.mackey = str(hex(self.mackey))[2:]
+        self.aeskey = format(self.aeskey, '064x')
+        self.mackey = format(self.mackey, '064x')
         print("Handshake info --> atm calculated aes/mac keys from DH exchange")
         self.s.send((aes.encrypt("finished",self.aeskey)).encode('utf-8'))
         print(f"Handshake info --> ATM ready to go, bank replied {aes.decrypt(self.s.recv(1024).decode('utf-8'),self.aeskey)}")
