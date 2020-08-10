@@ -173,7 +173,7 @@ class ATM:
 
 if __name__ == "__main__":
     # atmtest = ATM("Alex","alexpassword",["rsa"])
-    atmtest2 = ATM("Owen","owenpassword",["rsa"])
+    atmtest2 = ATM("Owen","owenpassword",["elgamal"])
     # print(atmtest2.pw)
     # print(atmtest.pw)
     # testatm = ATM("Owen","testpass", ['rsa'])
