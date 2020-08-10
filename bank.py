@@ -47,67 +47,89 @@ class Bank:
             self.client.send(sendback.encode('utf-8'))
 
     def deposit(self, usr, amt):
-            sendback = usr + "-"
-            self.usertomoney[usr] = str(int(self.usertomoney[usr]) + amt)
-            open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
-            sendback += self.usertomoney[usr] + '-' + "deposit successful"
-            sendback = str(self.counter) + '-' + sendback
-            sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
-            self.client.send(sendback.encode('utf-8'))
+        sendback = usr + "-"
+        self.usertomoney[usr] = str(int(self.usertomoney[usr]) + amt)
+        open("local_storage/usertomoney.txt", "w+").write(json.dumps(self.usertomoney))
+        sendback += self.usertomoney[usr] + '-' + "deposit successful"
+        sendback = str(self.counter) + '-' + sendback
+        sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
+        self.client.send(sendback.encode('utf-8'))
 
     def check(self, usr):
-            sendback = usr + "-"
-            sendback += self.usertomoney[usr] + '-' + "check successful"
-            sendback = str(self.counter) + '-' + sendback
-            sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
-            self.client.send(sendback.encode('utf-8'))
+        sendback = usr + "-"
+        sendback += self.usertomoney[usr] + '-' + "check successful"
+        sendback = str(self.counter) + '-' + sendback
+        sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
+        self.client.send(sendback.encode('utf-8'))
             
     def post_handshake(self):
+        # Initialize counter to a random number, as determined by client
         count = self.client.recv(4096).decode('utf-8')
         count = aes.decrypt(count,self.aeskey)
         count = count.split('-')
+
         chkhash = count[-1]
         count.remove(chkhash)
         againsthash = '-'.join(count)
-        if hash.sha1(againsthash) != chkhash:
+        # Ensure message wasn't tampered with
+        if hash.hmac(againsthash, self.mackey) != chkhash:
             sendback = "notverifieduser-0-msg integrity compromised"
-            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback), self.aeskey)
+            sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
             self.client.send(sendback.encode('utf-8'))
+
         self.counter = int(count[0]) + 1
         sendback = str(self.counter) + '-' + "counter exchange successful"
-        sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback), self.aeskey)
+        sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
         self.client.send(sendback.encode('utf-8'))
 
+        # User starts as not being logged in, wait for attempt to log in
         loggedin = False
         loginname = ""
         while True:
             cmd = self.client.recv(4096).decode('utf-8')
             if len(cmd) == 0:
+                # Socket is closed
                 self.s.close() 
                 return
+
             cmd = aes.decrypt(cmd, self.aeskey)
             cmd = cmd.split('-')
+            # Ensure message isn't a replay
             try:
                 self.countercheck(cmd)
             except Exception as e:
                 print(str(e))
                 break           
+
             chkhash = cmd[-1]
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
+            # Ensure message not tampered with
+            if chkhash != hash.hmac(againsthash, self.mackey):
+                sendback = 'notverifieduser-0-message tampered'
+                sendback = str(self.counter) + '-' + sendback
+                senback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
+                continue
+
             cmd = cmd[1:]
+            # Check if username is valid
             if cmd[0] not in list(self.usertopass.keys()):
                 sendback = "notverifieduser-0-username not known in bank"
                 sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
+
+            # Check if password is correct
             if cmd[1] != self.usertopass[cmd[0]]:
                 sendback = cmd[0] + "-0-password not matching in bank"
                 sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
+
+            # Login was successful, update atm
             loggedin = True
             loginname = cmd[0]
             sendback = loginname + "-"
@@ -121,62 +143,49 @@ class Bank:
         while True:
             cmd = self.client.recv(4096).decode('utf-8')
             if len(cmd) == 0:
+                # Socket was closed
                 break
+
             cmd = aes.decrypt(cmd,self.aeskey)
             cmd = cmd.split('-')
+            # Ensure message isn't a replay
             try:
                 self.countercheck(cmd)
             except Exception as e:
                 print(str(e))
                 break           
+
             chkhash = cmd[-1]
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
             cmd = cmd[1:]
+            # Check if message was tampered with
             if hash.hmac(againsthash,self.mackey) != chkhash:
                 sendback = "notverifieduser-0-msg integrity compromised"
                 sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
+
+            # Check that user claims they are who they signed in as
             if cmd[0] not in list(self.usertopass.keys()):
                 sendback = "notverifieduser-0-username not known in bank(tampered name error)"
                 sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
                 continue
+
+            #Check what the command is and do appropriate action
             if cmd[1] == 'withdraw' and loggedin:
                 self.withdraw(cmd[0], int(cmd[2]))
             elif cmd[1] == 'deposit' and loggedin:
                 self.deposit(cmd[0], int(cmd[2]))
             elif cmd[1] == 'check' and loggedin:
                 self.check(cmd[0])
-            elif cmd[1] == 'login':
-                if cmd[0] not in list(self.usertopass.keys()):
-                    sendback = "notverifieduser-0-username not known in bank"
-                    sendback = str(self.counter) + '-' + sendback
-                    sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
-                    self.client.send(sendback.encode('utf-8'))
-                    continue
-                if cmd[2] != self.usertopass[cmd[0]]:
-                    sendback = cmd[0] + "-0-password not matching in bank"
-                    sendback = str(self.counter) + '-' + sendback
-                    sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
-                    self.client.send(sendback.encode('utf-8'))
-                    continue
-                loggedin = True
-                loginname = cmd[0]
-                sendback = loginname + "-"
-                sendback += self.usertomoney[loginname] + '-' + "login successful"
-                sendback = str(self.counter) + '-' + sendback
-                sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
-                self.client.send(sendback.encode('utf-8'))
             else:
-                if loggedin:
-                    sendback = loginname + "-"
-                    sendback += self.usertomoney[loginname] + '-' + "invalid command"
-                else:
-                    sendback = "not_logged_in-0-LOGIN command not sent"
+                # Error parsing command, send message back
+                sendback = loginname + "-"
+                sendback += self.usertomoney[loginname] + '-' + "invalid command"
                 sendback = str(self.counter) + '-' + sendback
                 sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback, self.mackey), self.aeskey)
                 self.client.send(sendback.encode('utf-8'))
@@ -185,6 +194,7 @@ class Bank:
 
     def starthandshake(self): #encrypt username with atm public key, and send it back (deny connection if username doesnt exist)
         self.client, self.clientaddr = self.s.accept()
+
         clienthello = self.client.recv(1024)
         clienthello = clienthello.decode('utf-8').split('-')
         atmprefs = json.loads(clienthello[0])

@@ -27,7 +27,7 @@ class ATM:
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         self.counter = secrets.randbelow(pow(2, 2048))
         sendstr = str(self.counter)
-        sendstr = aes.encrypt(str(self.counter) + "-" + hash.sha1(sendstr), self.aeskey)
+        sendstr = aes.encrypt(str(self.counter) + "-" + hash.hmac(sendstr, self.mackey), self.aeskey)
         self.s.send(sendstr.encode('utf-8'))
 
         bankret = self.s.recv(99999).decode('utf-8')
@@ -43,7 +43,7 @@ class ATM:
         bankret.remove(chkhash)
         againsthash = '-'.join(bankret)
         bankret = bankret[1:]
-        if hash.sha1(againsthash) != chkhash:
+        if hash.hmac(againsthash, self.mackey) != chkhash:
             print("bank return msg integrity compromised")
             self.s.close()
             return
