@@ -1,7 +1,7 @@
 import json
 import hash
 import socket
-import ast
+import secrets
 from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
@@ -18,7 +18,11 @@ class ATM:
         self.pubkey = None
         self.privkey = None
         self.bankpubkey = None
-        self.counter = 1;
+        self.p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF
+        self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
+        self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
+        self.clientrandom = secrets.token_bytes(32)
+        self.counter = 1
         self.s = socket.socket()
         self.s.connect(('127.0.0.1', 5432))
 
@@ -101,38 +105,35 @@ class ATM:
             self.bankpubkey = bkeypairs[0] # see above
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
-        print("Handshake info --> sending MAC key to bank...")
-        macsender = self.mackey + '-' + hash.sha1(self.mackey)
+        print("Handshake info --> sending client random")
+        self.s.send(str(self.clientrandom).encode('utf-8'))
+        clirandplain = self.s.recv(99999).decode('utf-8')
+        self.s.send("recieved plaintext signature".encode('utf-8'))
+        clirandsign = self.s.recv(4096).decode('utf-8')
         if self.scheme == 'rsa':
-            macsender = rsa.encrypt(macsender,self.bankpubkey)
+            clirandsign = rsa.verify_signature(int(clirandsign),clirandplain,self.bankpubkey)
         else:
-            macsender = elgamal.encrypt(macsender,self.bankpubkey)
-        self.s.send(str(macsender).encode('utf-8'))
-        print(f"Handshake info --> bank returned {self.s.recv(4096).decode('utf-8')}")
-        print("Handshake info --> sending AES key...")
-        if self.scheme == 'rsa':
-            aestmp = self.aeskey + '-' + hash.sha1(self.aeskey)
-            aestmp = rsa.encrypt(aestmp, self.bankpubkey)
-            self.s.send(str(aestmp).encode('utf-8'))
-            print(f"Handshake info --> AES key sent, bank replied {self.s.recv(1024).decode('utf-8')}")
-        else:
-            aestmp1of2 = self.aeskey[:len(self.aeskey)//2]
-            aestmp2of2 = self.aeskey[len(self.aeskey)//2:]
-            aestmp1of2 = aestmp1of2 + '-' + hash.sha1(aestmp1of2)
-            aestmp2of2 = aestmp2of2 + '-' + hash.sha1(aestmp2of2)
-            aestmp1of2 = elgamal.encrypt(aestmp1of2, self.bankpubkey)
-            aestmp2of2 = elgamal.encrypt(aestmp2of2, self.bankpubkey)
-            self.s.send(str(aestmp1of2).encode('utf-8'))
-            print(f"Handshake info --> AES block 1/2 sent, bank replied {self.s.recv(1024).decode('utf-8')}") #bank replied good block
-            self.s.send(str(aestmp2of2).encode('utf-8'))
-            print(f"Handshake info --> AES block 2/2 sent, bank replied {self.s.recv(1024).decode('utf-8')}") #bank replied good block
+            clirandsign = clirandsign.strip("(").strip(")").split(",")
+            clirandsign = [x.strip() for x in clirandsign] #take away tuple space or wierd stuff
+            clirandsign = (int(clirandsign[0]), int(clirandsign[1]))
+            clirandsign = elgamal.verify_signature(clirandsign,clirandplain,self.bankpubkey)
 
-        print("Handshake info --> sending over atm pubkey...")
-        pubkeysender = aes.encrypt((str(self.pubkey) + '-' + hash.hmac(str(self.pubkey),self.mackey)),self.aeskey)
-        self.s.send(pubkeysender.encode('utf-8'))
-        pubkeyret = self.s.recv(4096).decode('utf-8')
-        print(f"Handshake info --> bank returned {pubkeyret}")
-        print("Handshake info --> ATM ready to go!")
+        if clirandsign:
+            self.s.send("signature verify success".encode('utf-8'))
+        else:
+            self.s.send("signature verify failed".encode('utf-8'))
+            raise Exception("signature verify failed")
+        self.s.recv(4096) #formatting
+        print("Handshake info --> bank signature verified, DH parameters recieved")
+        self.s.send((str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))).encode('utf-8'))
+        clirandplain = clirandplain.split('-')
+        self.aeskey = pow(int(clirandplain[-2]),self.dhprivateaes,self.p) % pow(2,256)
+        self.mackey = pow(int(clirandplain[-1]),self.dhprivatemac,self.p) % pow(2,256)
+        self.aeskey = str(hex(self.aeskey))[2:]
+        self.mackey = str(hex(self.mackey))[2:]
+        print("Handshake info --> atm calculated aes/mac keys from DH exchange")
+        self.s.send((aes.encrypt("finished",self.aeskey)).encode('utf-8'))
+        print(f"Handshake info --> ATM ready to go, bank replied {aes.decrypt(self.s.recv(1024).decode('utf-8'),self.aeskey)}")
         self.post_handshake()
 
 if __name__ == "__main__":
