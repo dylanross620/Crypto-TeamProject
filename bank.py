@@ -88,17 +88,8 @@ class Bank:
             sendback = "notverifieduser-0-msg integrity compromised"
             sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
             self.client.send(sendback.encode('utf-8'))
-        if count[1] not in list(self.usertopass.keys()):
-            sendback = "notverifieduser-0-username not known in bank"
-            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
-            self.client.send(sendback.encode('utf-8'))
-        if count[2] != self.usertopass[count[1]]:
-            sendback = count[1] + "-"
-            sendback += self.usertomoney[usr] + '-' + "password not matching in bank"
-            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
-            self.client.send(sendback.encode('utf-8'))
         self.counter = int(count[0]) + 1
-        sendback = str(self.counter) + '-' + count[1] + "-" + "counter exchange successful"
+        sendback = str(self.counter) + '-' + "counter exchange successful"
         sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
         self.client.send(sendback.encode('utf-8'))
 
@@ -107,10 +98,52 @@ class Bank:
         while True:
             cmd = self.client.recv(4096).decode('utf-8')
             if len(cmd) == 0:
+                self.s.close() 
+                return
+            cmd = aes.decrypt(cmd,self.aeskey)
+            cmd = cmd.split('-')
+            try:
+                self.countercheck(cmd)
+            except Exception as e:
+                print(str(e))
+                break           
+            chkhash = cmd[-1]
+            cmd.remove(chkhash)
+            againsthash = '-'.join(cmd)
+            cmd = cmd[1:]
+            if cmd[0] not in list(self.usertopass.keys()):
+                sendback = "notverifieduser-0-username not known in bank"
+                sendback = str(self.counter) + '-' + sendback
+                sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback,self.mackey),self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
+                continue
+            if cmd[1] != self.usertopass[cmd[0]]:
+                sendback = cmd[0] + "-0-password not matching in bank"
+                sendback = str(self.counter) + '-' + sendback
+                sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback,self.mackey),self.aeskey)
+                self.client.send(sendback.encode('utf-8'))
+                continue
+            loggedin = True
+            loginname = cmd[0]
+            sendback = loginname + "-"
+            sendback += self.usertomoney[loginname] + '-' + "login successful"
+            sendback = str(self.counter) + '-' + sendback
+            sendback = aes.encrypt(sendback + '-' + hash.hmac(sendback,self.mackey),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+            break
+        
+
+        while True:
+            cmd = self.client.recv(4096).decode('utf-8')
+            if len(cmd) == 0:
                 break
             cmd = aes.decrypt(cmd,self.aeskey)
             cmd = cmd.split('-')
-            self.countercheck(cmd)
+            try:
+                self.countercheck(cmd)
+            except Exception as e:
+                print(str(e))
+                break           
             chkhash = cmd[-1]
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
@@ -170,9 +203,8 @@ class Bank:
         clienthello = self.client.recv(1024)
         clienthello = clienthello.decode('utf-8').split('-')
         print(clienthello)
-        clientname = repr(clienthello[0]).strip("'")
-        atmprefs = json.loads(clienthello[1])
-        print(f"ATM user " + clientname + " has initiated handshake, hello to BANK server!")
+        atmprefs = json.loads(clienthello[0])
+        print("ATM has initiated handshake, hello to BANK server!")
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
         if len(common) == 0:

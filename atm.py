@@ -34,72 +34,97 @@ class ATM:
         self.counter = int(msg[0]) + 1
 
     def post_handshake(self): #takes in user input to interact with bank indefinitely
-        print("ATM")
-        print("Example login(atm will try to verify with your initalized user/pass): LOGIN")
-        print("Example withdraw: 'withdraw [positive_int]'")
-        print("Example deposit: 'deposit [positive_int]'")
-        print("Example check: 'check balance'")
-        print("To close ATM, type q")
-        print("---------------------------------------------------")
         self.counter = secrets.randbelow(pow(2, 2048))
-        sendstr = str(self.counter) + '-' + self.user + '-' + self.pw
-        sendstr = aes.encrypt(sendstr + "-" + hash.sha1(sendstr),self.aeskey)
+        sendstr = str(self.counter)
+        sendstr = aes.encrypt(str(self.counter) + "-" + hash.sha1(sendstr),self.aeskey)
         self.s.send(sendstr.encode('utf-8'))
 
-        bankret = self.s.recv(99999).decode('utf-8')#parse this out
+        bankret = self.s.recv(99999).decode('utf-8')
         bankret = aes.decrypt(bankret,self.aeskey)
         bankret = bankret.split('-')
         try:
             self.countercheck(bankret)
         except Exception as e:
             print(str(e))
+            self.s.close()
+            return
         chkhash = bankret[-1]
         bankret.remove(chkhash)
         againsthash = '-'.join(bankret)
         bankret = bankret[1:]
         if hash.sha1(againsthash) != chkhash:
             print("bank return msg integrity compromised")
-        if bankret[0] != self.user:
-            print("bank user return value tampered with")
-        print(f"Counter set, bank replied with '{bankret[1]}'")
+            self.s.close()
+            return
+
+        print(f"Counter set, bank replied with '{bankret[0]}'")
+        print("ATM")
 
         loggedin = False
         loggingin = False
+        username = ""
+        password = ""
+        while True:
+            print("Please log in")
+            username = input("username: ")
+            password = input("password: ")
+            sendstr = username + '-' + hash.sha1(password)
+            sendstr = str(self.counter) + '-' + sendstr
+
+            sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr,self.mackey),self.aeskey)
+            self.s.send(sendstr.encode('utf-8'))
+
+            bankret = self.s.recv(99999).decode('utf-8')#parse this out
+            bankret = aes.decrypt(bankret,self.aeskey)
+            bankret = bankret.split('-')
+            try:
+                self.countercheck(bankret)
+            except Exception as e:
+                print(str(e))
+                continue
+            chkhash = bankret[-1]
+            bankret.remove(chkhash)
+            againsthash = '-'.join(bankret)
+            bankret = bankret[1:]
+            if hash.hmac(againsthash,self.mackey) != chkhash:
+                print("bank return msg integrity compromised")
+                continue
+            print(f"bank responded with '{bankret[2]}' to the login attempt")
+            if bankret[2] == "login successful":
+                break
+        
+        print("Example withdraw: 'withdraw [positive_int]'")
+        print("Example deposit: 'deposit [positive_int]'")
+        print("Example check: 'check balance'")
+        print("To close ATM, type q")
+        print("---------------------------------------------------")
+
         while True:
             inp = input("command: ")
             inp = inp.strip()
             if inp == 'q':
                 break
-            sendstr = self.user + '-'
-            if inp.lower() == 'login':
-                if loggedin:
-                    print("already logged in")
-                    continue
-                username = input("username: ")
-                password = input("password: ")
-                sendstr = username + '-' + inp.lower() + '-' + hash.sha1(password)
-                # sendstr += inp.lower() + '-' + self.pw
+            sendstr = username + '-'
+            inp = inp.split(' ')
+            if len(inp) != 2:
+                print("not a valid operation supported by bank")
+                continue
+            if inp[0].lower() == 'withdraw':
+                sendstr += inp[0].lower()
+            elif inp[0].lower() == 'deposit':
+                sendstr += inp[0].lower()
+            elif inp[0].lower() == 'check':
+                sendstr += inp[0].lower()
             else:
-                inp = inp.split(' ')
-                if len(inp) != 2:
-                    print("not a valid operation supported by bank")
-                    continue
-                if inp[0].lower() == 'withdraw':
-                    sendstr += inp[0].lower()
-                elif inp[0].lower() == 'deposit':
-                    sendstr += inp[0].lower()
-                elif inp[0].lower() == 'check':
-                    sendstr += inp[0].lower()
-                else:
-                    print("not a valid operation supported by bank")
-                    continue
-                if inp[1].isnumeric() and int(inp[1]) > 0:
-                    sendstr += '-' + inp[1]
-                elif inp[1].lower() == 'balance':
-                    sendstr += '-' + inp[1]
-                else:
-                    print("invalid money amount")
-                    continue
+                print("not a valid operation supported by bank")
+                continue
+            if inp[1].isnumeric() and int(inp[1]) > 0:
+                sendstr += '-' + inp[1]
+            elif inp[1].lower() == 'balance':
+                sendstr += '-' + inp[1]
+            else:
+                print("invalid money amount")
+                continue
             sendstr = str(self.counter) + '-' + sendstr
             sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr,self.mackey),self.aeskey)
             self.s.send(sendstr.encode('utf-8'))
@@ -120,12 +145,10 @@ class ATM:
                 print("bank return msg integrity compromised")
                 continue
             print(f"bank responded with '{bankret[2]}' to the request, money in account: {bankret[1]}") 
-            if bankret[2] == "login successful":
-                loggedin = True
         self.s.close()
 
     def starthandshake(self):
-        self.s.send((self.user + '-' + str(json.dumps(self.prefs))).encode('utf-8'))
+        self.s.send((str(json.dumps(self.prefs))).encode('utf-8'))
         bankhello = self.s.recv(4096)
         self.scheme = bankhello.decode('utf-8')
         if self.scheme == "rsa":
