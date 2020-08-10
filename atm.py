@@ -7,22 +7,13 @@ from PublicKey import rsa
 from PublicKey import elgamal
 from PrivateKey import aes
 class ATM:
-    def __init__(self, username, password, preflist = []):
-        self.user = username
-        self.pw  = hash.sha1(password)
+    def __init__(self, preflist = []):
         self.aeskey = None
         self.mackey = None
+        self.p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF
         if len(preflist) == 0:
             raise Exception("need to have preferences as the user to compare to server...")
         self.prefs = preflist
-        self.scheme = None
-        self.pubkey = None
-        self.privkey = None
-        self.bankpubkey = None
-        self.p = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF
-        self.dhprivateaes = None
-        self.dhprivatemac = None
-        self.clientrandom = None
         self.counter = 1
         self.id_num = 0 # each atm would have it's own id number
         self.s = socket.socket()
@@ -36,11 +27,11 @@ class ATM:
     def post_handshake(self): #takes in user input to interact with bank indefinitely
         self.counter = secrets.randbelow(pow(2, 2048))
         sendstr = str(self.counter)
-        sendstr = aes.encrypt(str(self.counter) + "-" + hash.sha1(sendstr),self.aeskey)
+        sendstr = aes.encrypt(str(self.counter) + "-" + hash.sha1(sendstr), self.aeskey)
         self.s.send(sendstr.encode('utf-8'))
 
         bankret = self.s.recv(99999).decode('utf-8')
-        bankret = aes.decrypt(bankret,self.aeskey)
+        bankret = aes.decrypt(bankret, self.aeskey)
         bankret = bankret.split('-')
         try:
             self.countercheck(bankret)
@@ -61,7 +52,6 @@ class ATM:
         print("ATM")
 
         loggedin = False
-        loggingin = False
         username = ""
         password = ""
         while True:
@@ -71,11 +61,11 @@ class ATM:
             sendstr = username + '-' + hash.sha1(password)
             sendstr = str(self.counter) + '-' + sendstr
 
-            sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr,self.mackey),self.aeskey)
+            sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr, self.mackey), self.aeskey)
             self.s.send(sendstr.encode('utf-8'))
 
             bankret = self.s.recv(99999).decode('utf-8')#parse this out
-            bankret = aes.decrypt(bankret,self.aeskey)
+            bankret = aes.decrypt(bankret, self.aeskey)
             bankret = bankret.split('-')
             try:
                 self.countercheck(bankret)
@@ -86,7 +76,7 @@ class ATM:
             bankret.remove(chkhash)
             againsthash = '-'.join(bankret)
             bankret = bankret[1:]
-            if hash.hmac(againsthash,self.mackey) != chkhash:
+            if hash.hmac(againsthash, self.mackey) != chkhash:
                 print("bank return msg integrity compromised")
                 continue
             print(f"bank responded with '{bankret[2]}' to the login attempt")
@@ -126,11 +116,11 @@ class ATM:
                 print("invalid money amount")
                 continue
             sendstr = str(self.counter) + '-' + sendstr
-            sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr,self.mackey),self.aeskey)
+            sendstr = aes.encrypt(sendstr + "-" + hash.hmac(sendstr, self.mackey), self.aeskey)
             self.s.send(sendstr.encode('utf-8'))
 
             bankret = self.s.recv(99999).decode('utf-8')#parse this out
-            bankret = aes.decrypt(bankret,self.aeskey)
+            bankret = aes.decrypt(bankret, self.aeskey)
             bankret = bankret.split('-')
             try:
                 self.countercheck(bankret)
@@ -141,7 +131,7 @@ class ATM:
             bankret.remove(chkhash)
             againsthash = '-'.join(bankret)
             bankret = bankret[1:]
-            if hash.hmac(againsthash,self.mackey) != chkhash:
+            if hash.hmac(againsthash, self.mackey) != chkhash:
                 print("bank return msg integrity compromised")
                 continue
             print(f"bank responded with '{bankret[2]}' to the request, money in account: {bankret[1]}") 
@@ -150,33 +140,30 @@ class ATM:
     def starthandshake(self):
         self.s.send((str(json.dumps(self.prefs))).encode('utf-8'))
         bankhello = self.s.recv(4096)
-        self.scheme = bankhello.decode('utf-8')
-        if self.scheme == "rsa":
+        scheme = bankhello.decode('utf-8')
+        if scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
-            self.bankpubkey = rsa.load_public_key("local_storage/bank-rsa.txt") # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
+            bankpubkey = rsa.load_public_key("local_storage/bank-rsa.txt") # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
         else:
-            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",2048)
-            self.bankpubkey = elgamal.load_public_key("local_storage/bank-elgamal.txt") # see above
-        self.pubkey = keypairs[0]
-        self.privkey = keypairs[1]
+            keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt", 2048)
+            bankpubkey = elgamal.load_public_key("local_storage/bank-elgamal.txt") # see above
+        pubkey = keypairs[0]
+        privkey = keypairs[1]
         print("Handshake info --> sending client random")
-        self.clientrandom = secrets.token_bytes(32)
-        self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
-        self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
-        dh_message = str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))
-        print(dh_message)
+        dhprivateaes = secrets.randbelow(((self.p - 1) // 2) + 1)
+        dhprivatemac = secrets.randbelow(((self.p - 1) // 2) + 1)
+        dh_message = str(pow(2, dhprivateaes, self.p)) + '-' + str(pow(2, dhprivatemac, self.p))
         self.s.send(dh_message.encode('utf-8'))
         clirandplain = self.s.recv(99999).decode('utf-8')
-        print(clirandplain)
         self.s.send("recieved plaintext signature".encode('utf-8'))
         clirandsign = self.s.recv(4096).decode('utf-8')
-        if self.scheme == 'rsa':
-            clirandsign = rsa.verify_signature(int(clirandsign),clirandplain,self.bankpubkey)
+        if scheme == 'rsa':
+            clirandsign = rsa.verify_signature(int(clirandsign), clirandplain, bankpubkey)
         else:
             clirandsign = clirandsign.strip("(").strip(")").split(",")
             clirandsign = [x.strip() for x in clirandsign] #take away tuple space or wierd stuff
             clirandsign = (int(clirandsign[0]), int(clirandsign[1]))
-            clirandsign = elgamal.verify_signature(clirandsign,clirandplain,self.bankpubkey)
+            clirandsign = elgamal.verify_signature(clirandsign, clirandplain, bankpubkey)
 
         clirandplain = clirandplain.split('-')
         if clirandsign and (clirandplain[0] + '-' + clirandplain[1]) == dh_message:
@@ -187,10 +174,8 @@ class ATM:
             raise Exception("signature verify failed")
         self.s.recv(4096) #formatting
         print("Handshake info --> bank signature verified, DH parameters recieved")
-        # self.aeskey = aes.generate_key()
-        # self.mackey = hash.generate_mac_key()
-        self.aeskey = pow(int(clirandplain[-2]),self.dhprivateaes,self.p) % pow(2,256)
-        self.mackey = pow(int(clirandplain[-1]),self.dhprivatemac,self.p) % pow(2,256)
+        self.aeskey = pow(int(clirandplain[-2]), dhprivateaes, self.p) % pow(2,256)
+        self.mackey = pow(int(clirandplain[-1]), dhprivatemac, self.p) % pow(2,256)
         self.aeskey = format(self.aeskey, '064x')
         self.mackey = format(self.mackey, '064x')
         print("Handshake info --> atm calculated aes/mac keys from DH exchange")
@@ -200,21 +185,17 @@ class ATM:
         # Prove to bank that we're actually an ATM
         self.s.send(aes.encrypt(f'atm{self.id_num}', self.aeskey).encode('utf-8'))
         bank_challenge = aes.decrypt(self.s.recv(4096).decode('utf-8'), self.aeskey)
-        if self.scheme == 'rsa':
-            response = rsa.decrypt(int(bank_challenge), self.privkey)
+        if scheme == 'rsa':
+            response = rsa.decrypt(int(bank_challenge), privkey)
         else:
             bank_challenge = bank_challenge.strip('(').strip(')').split(',')
             bank_challenge = [int(c) for c in bank_challenge]
-            response = elgamal.decrypt(bank_challenge, self.privkey)
+            response = elgamal.decrypt(bank_challenge, privkey)
         response = hash.sha1(response + self.aeskey)
         self.s.send(aes.encrypt(response, self.aeskey).encode('utf-8'))
 
         self.post_handshake()
 
 if __name__ == "__main__":
-    # atmtest = ATM("Alex","alexpassword",["rsa"])
-    atmtest2 = ATM("Owen","owenpassword",["elgamal"])
-    # print(atmtest2.pw)
-    # print(atmtest.pw)
-    # testatm = ATM("Owen","testpass", ['rsa'])
+    atmtest2 = ATM(["elgamal"])
     atmtest2.starthandshake() 
