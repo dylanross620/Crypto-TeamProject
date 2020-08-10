@@ -7,3 +7,12 @@
 \BOOKMARK [2][-]{subsection.1.3}{Encryption}{section.1}% 7
 \BOOKMARK [2][-]{subsection.1.4}{Decryption}{section.1}% 8
 \BOOKMARK [2][-]{subsection.1.5}{Security Measures in Implementation}{section.1}% 9
+<<<<<<< HEAD
+=======
+\BOOKMARK [1][-]{section.2}{ElGamal}{}% 10
+\BOOKMARK [2][-]{subsection.2.1}{Background Math}{section.2}% 11
+\BOOKMARK [2][-]{subsection.2.2}{Key Generation}{section.2}% 12
+\BOOKMARK [2][-]{subsection.2.3}{Encryption}{section.2}% 13
+\BOOKMARK [2][-]{subsection.2.4}{Decryption}{section.2}% 14
+\BOOKMARK [2][-]{subsection.2.5}{Security Concerns}{section.2}% 15
+>>>>>>> e55b31506ab5f44137f820b014476e67379e7154
