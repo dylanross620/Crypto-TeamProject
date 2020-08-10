@@ -351,4 +351,4 @@ def decrypt(msg: str, key: str) -> str:
     return decrypted.rstrip('\x00') # remove padding
 
 def generate_key() -> str:
-    return format(secrets.randbits(32*8), '064x') # generate 32 bits and write them in hex with at least (will be exactly) 64 digits
+    return format(secrets.randbits(32*8), '064x') # generate 32 bytes and write them in hex with at least (will be exactly) 64 digits
