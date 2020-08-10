@@ -21,9 +21,9 @@ class Bank:
         self.mackey = None
         self.counter = 0
         self.p= 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF
-        self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
-        self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
-        self.serverrandom = secrets.token_bytes(32)
+        self.dhprivateaes = None
+        self.dhprivatemac = None
+        self.serverrandom = None
         self.s = socket.socket()
         self.s.bind(('127.0.0.1',5432))
         self.s.listen(5)
@@ -78,6 +78,30 @@ class Bank:
             self.client.send(sendback.encode('utf-8'))
             
     def post_handshake(self):
+        count = self.client.recv(4096).decode('utf-8')
+        count = aes.decrypt(count,self.aeskey)
+        count = count.split('-')
+        chkhash = count[-1]
+        count.remove(chkhash)
+        againsthash = '-'.join(count)
+        if hash.sha1(againsthash) != chkhash:
+            sendback = "notverifieduser-0-msg integrity compromised"
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        if count[1] not in list(self.usertopass.keys()):
+            sendback = "notverifieduser-0-username not known in bank"
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        if count[2] != self.usertopass[count[1]]:
+            sendback = count[1] + "-"
+            sendback += self.usertomoney[usr] + '-' + "password not matching in bank"
+            sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+            self.client.send(sendback.encode('utf-8'))
+        self.counter = int(count[0]) + 1
+        sendback = str(self.counter) + '-' + count[1] + "-" + "counter exchange successful"
+        sendback = aes.encrypt(sendback + '-' + hash.sha1(sendback),self.aeskey)
+        self.client.send(sendback.encode('utf-8'))
+
         loggedin = False
         loginname = ""
         while True:
@@ -166,6 +190,9 @@ class Bank:
         print("Handshake info --> recieving client random")
         clirand = self.client.recv(4096).decode('utf-8')
         print("Handshake info --> signing client random, server random, and DH parameters")
+        self.dhprivateaes = secrets.randbelow(((self.p - 1) // 2)+1)
+        self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
+        self.serverrandom = secrets.token_bytes(32)
         clisign = str(clirand) + '-' + str(self.serverrandom) + '-' + str(pow(2, self.dhprivateaes, self.p)) + '-' + str(pow(2, self.dhprivatemac, self.p))
         clie = None
         if self.scheme == 'rsa':
