@@ -24,6 +24,7 @@ class ATM:
         self.dhprivatemac = secrets.randbelow(((self.p - 1) // 2)+1)
         self.clientrandom = secrets.token_bytes(32)
         self.counter = 1
+        self.id_num = 0 # each atm would have it's own id number
         self.s = socket.socket()
         self.s.connect(('127.0.0.1', 5432))
 
@@ -119,12 +120,10 @@ class ATM:
         self.scheme = bankhello.decode('utf-8')
         if self.scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/atm-rsa.txt", 4096)
-            bkeypairs = rsa.load_keys("local_storage/bank-rsa.txt",4096)
-            self.bankpubkey = bkeypairs[0] # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
+            self.bankpubkey = rsa.load_public_key("local_storage/bank-rsa.txt") # simulates the bank's public keys being hardcoded into the atm. This way if we chose to reset the bank key, we don't have to update this
         else:
             keypairs = elgamal.load_keys("local_storage/atm-elgamal.txt",2048)
-            bkeypairs = elgamal.load_keys("local_storage/bank-elgamal.txt",1024)
-            self.bankpubkey = bkeypairs[0] # see above
+            self.bankpubkey = elgamal.load_public_key("local_storage/bank-elgamal.txt") # see above
         self.pubkey = keypairs[0]
         self.privkey = keypairs[1]
         print("Handshake info --> sending client random")
@@ -157,6 +156,19 @@ class ATM:
         print("Handshake info --> atm calculated aes/mac keys from DH exchange")
         self.s.send((aes.encrypt("finished",self.aeskey)).encode('utf-8'))
         print(f"Handshake info --> ATM ready to go, bank replied {aes.decrypt(self.s.recv(1024).decode('utf-8'),self.aeskey)}")
+
+        # Prove to bank that we're actually an ATM
+        self.s.send(aes.encrypt(f'atm{self.id_num}', self.aeskey).encode('utf-8'))
+        bank_challenge = aes.decrypt(self.s.recv(4096).decode('utf-8'), self.aeskey)
+        if self.scheme == 'rsa':
+            response = rsa.decrypt(int(bank_challenge), self.privkey)
+        else:
+            bank_challenge = bank_challenge.strip('(').strip(')').split(',')
+            bank_challenge = [int(c) for c in bank_challenge]
+            response = elgamal.decrypt(bank_challenge, self.privkey)
+        response = hash.sha1(response + self.aeskey)
+        self.s.send(aes.encrypt(response, self.aeskey).encode('utf-8'))
+
         self.post_handshake()
 
 if __name__ == "__main__":

@@ -30,6 +30,18 @@ def load_keys(filename: str, bitsize: int) -> tuple:
         f.close()
         return (pub_key, priv_key)
 
+# Load a public key from a file
+# assumes the file exists and is properly formatted
+def load_public_key(filename: str) -> tuple:
+    f = open(filename, 'r')
+    lines = f.readlines()
+
+    n = int(lines[0])
+    e = int(lines[1])
+
+    f.close()
+    return (n, e)
+
 # Generate keys where n has bitsize bits
 # return in form (public key, private key) where public key is (N, e) and
 #   private key is (N, d)
