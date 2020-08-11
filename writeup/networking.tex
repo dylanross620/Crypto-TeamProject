@@ -1,0 +1,46 @@
+\section{Networking Protocols}\label{sec:networking}
+Made by all three members\\
+Writeup written by Dylan Ross\\
+
+	\medskip
+	For our project, we chose to implement a combination of the SSL and the SSH protocols. The networking of our project can be segmented into three main sections: the handshake, ATM
+	verification, and user sign in and banking.
+
+	\subsection{Handshake Protocol}\label{sec:networking-handshake}
+		The handshake protocol is responsible for sharing secret keys between the ATM the bank for use in symmetric encryption and MAC generation. For our handshake, we chose to implement the
+		TLS protocol. The bank acts as a server in our project, and as such must be running when the ATM is run in order to establish a connection.\\
+
+		The ATM begins the handshake by sending a "hello" packet to the bank. This packet contains all of the public key cryptosystems that the ATM can support for connecting to the bank. It
+		is assumed that the ATM already knows the bank's public keys for these systems. This list of supported systems is in the order of the ATM's preference. Upon receiving this packet,
+		the bank uses the received list to select the system that will be used according to its own preferences. Once a system is selected, the bank sends its selection to the ATM as a response
+		to the "hello" packet.\\
+
+		Once the ATM receives the bank's selected cryptosystem, the Diffie-Hellman (DH) protocol can begin. The ATM and the bank both have a shared modulus $p$ and generator $g$, which is defined
+		by the 1536-bit MODP group from \href{https://www.ietf.org/rfc/rfc3526.txt}{RFC 3526}. The ATM will generate a random number $a$ and the bank will generate a random integer $b$, both of
+		which are in the range $[1,\frac{p-1}{2}]$. The ATM will begin the DH protocol by sending to the bank the value of $g^a\text{ mod }p$. Due to the discrete logarithm problem discussed in
+		section \ref{sec:elgamal-background}, an eavesdropper over the network cannot recover $a$ from $g^a$. Upon receiving $g^a$, the bank will generate a message that contains $g^a$ and $g^b$
+		and send both this message and its signature back to the ATM. This signature is using the public key system that was previously decided upon and serves to both verify that the bank
+		received $g^a$ correctly and that the value for $g^b$ is actually from the bank. At this point, $(g^a)^b\equiv(g^b)^a\text{ mod }p$ is a shared 1536-bit number between the bank and the
+		ATM. In order to generate a key from this large number, we do $K\equiv g^{ab}\text{ mod }2^{256}$ in order to generate a 256-bit key.\\
+
+		Because our protocol needs two seperate keys for encryption and message authentication, the DH protocol shown above is done twice simultaneously in order to generate two distinct keys.
+
+	\subsection{ATM Verification}\label{sec:networking-atm}
+		Once the DH protocol is finished, both systems are ready to use AES symmetric encryption. However, before banking can start, the bank must authenticate that the client it just exchanged
+		a key with is actually an ATM. If this step was skipped, a malicious user could connect to the bank and repeatedly send packets telling the bank to deposit money into their own account.
+		In order for this authentication, we assume that every ATM has a unique identifier and that the bank has access locally to the public keys of every ATM.\\
+
+		The ATM uses AES to send its identifier to the bank in order to start the authentication process. Upon receiving this message, the bank will look up the ATM's public key using the
+		identifier and will generate a random number. The public key that is selected is the one corresponding to the same public key system used in the handshake. The bank encrypts the random
+		number using the ATM's public key, and uses AES to send it as a challenge. When the ATM receives this challenge, it uses its private key to retrieve the random number and responds with
+		the hash of the random number concatenated with the session's encryption key. This hash is sent to the bank using AES and the bank verifies it in order to verify the ATM.
+
+	\subsection{Sign in and Banking}\label{sec:networking-signin}
+		At this point, the ATM has been verified to the bank and they share private keys for both message encryption and authentication. As such, all future messages are encrypted using AES and
+		authenticated using HMAC with these shared keys.\\
+
+		Before the user can begin managing their account, they must first sign in. In order to do so, the ATM will prompt the user for their username and password. The ATM then sends the username
+		and the hash of the password to the bank, which will verify the login credentials and respond to the ATM accordingly.\\
+
+		Once the user has signed in, they can deposit money, withdraw money, and check their balance. For each of these actions, the ATM generates a corresponding packet that it sends to the bank,
+		which the bank then verifies, performs the corresponding action, and sends resulting data back to the ATM to be shown to the user.
