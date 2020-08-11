@@ -264,12 +264,16 @@ class Bank:
         client_keyname = aes.decrypt(self.client.recv(1024).decode('utf-8'), self.aeskey)
         challenge = format(secrets.randbits(20*8), '040x')
 
-        if scheme == 'rsa':
-            client_pubkey = rsa.load_public_key(f"local_storage/{client_keyname}-rsa.pub")
-            challenge_encrypted = rsa.encrypt(challenge, client_pubkey)
-        else:
-            client_pubkey = elgamal.load_public_key(f"local_storage/{client_keyname}-elgamal.pub")
-            challenge_encrypted = elgamal.encrypt(challenge, client_pubkey)
+        try:
+            if scheme == 'rsa':
+                client_pubkey = rsa.load_public_key(f"local_storage/{client_keyname}-rsa.pub")
+                challenge_encrypted = rsa.encrypt(challenge, client_pubkey)
+            else:
+                client_pubkey = elgamal.load_public_key(f"local_storage/{client_keyname}-elgamal.pub")
+                challenge_encrypted = elgamal.encrypt(challenge, client_pubkey)
+        except:
+            self.client.close()
+            raise Exception('client identifier is invalid')
 
         self.client.send(aes.encrypt(str(challenge_encrypted), self.aeskey).encode('utf-8')) 
 
