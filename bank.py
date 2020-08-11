@@ -71,6 +71,7 @@ class Bank:
         chkhash = count[-1]
         count.remove(chkhash)
         againsthash = '-'.join(count)
+
         # Ensure message wasn't tampered with
         if hash.hmac(againsthash, self.mackey) != chkhash:
             sendback = "notverifieduser-0-msg integrity compromised"
@@ -104,6 +105,7 @@ class Bank:
             chkhash = cmd[-1]
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
+
             # Ensure message not tampered with
             if chkhash != hash.hmac(againsthash, self.mackey):
                 sendback = 'notverifieduser-0-message tampered'
@@ -159,6 +161,7 @@ class Bank:
             cmd.remove(chkhash)
             againsthash = '-'.join(cmd)
             cmd = cmd[1:]
+
             # Check if message was tampered with
             if hash.hmac(againsthash,self.mackey) != chkhash:
                 sendback = "notverifieduser-0-msg integrity compromised"
@@ -167,7 +170,7 @@ class Bank:
                 self.client.send(sendback.encode('utf-8'))
                 continue
 
-            # Check that user claims they are who they signed in as
+            # Check that user name hasn't been modified
             if cmd[0] not in list(self.usertopass.keys()):
                 sendback = "notverifieduser-0-username not known in bank(tampered name error)"
                 sendback = str(self.counter) + '-' + sendback
@@ -199,6 +202,8 @@ class Bank:
         clienthello = clienthello.decode('utf-8').split('-')
         atmprefs = json.loads(clienthello[0])
         print("ATM has initiated handshake, hello to BANK server!")
+
+        # Parse hello message to select which PKC to use
         atmprefs = [x.lower() for x in atmprefs]
         common = list(set(self.methods) & set(atmprefs))
         scheme = None
@@ -208,6 +213,8 @@ class Bank:
         else:
             scheme = common[0]
         print(f"Handshake info --> common encryption scheme set to use {scheme}")
+
+        # Load correct keys for selected system
         keypairs = None
         if scheme == "rsa":
             keypairs = rsa.load_keys("local_storage/bank-rsa.txt", 4096)
@@ -215,23 +222,33 @@ class Bank:
             keypairs = elgamal.load_keys("local_storage/bank-elgamal.txt", 1024)
         pubkey = keypairs[0]
         privkey = keypairs[1]
+        # Tell atm which scheme to use
         self.client.send(scheme.encode('utf-8'))
+
+        # Begin Diffie-Hellman
         print("Handshake info --> recieving client random")
         clirand = self.client.recv(4096).decode('utf-8')
         print("Handshake info --> signing client random, server random, and DH parameters")
         dhprivateaes = secrets.randbelow(((self.p - 1) // 2) + 1)
         dhprivatemac = secrets.randbelow(((self.p - 1) // 2) + 1)
+
+        # Generate our DH values for both aes key and mac key. Send to client along with their values to ensure we received it properly
         clisign = str(clirand) + '-' + str(pow(2, dhprivateaes, self.p)) + '-' + str(pow(2, dhprivatemac, self.p))
+        # Sign the message so atm knows it came from bank
         clie = None
         if scheme == 'rsa':
             clie = rsa.sign(clisign, privkey)
         else:
             clie = elgamal.sign(clisign, privkey, pubkey)
+
         self.client.send(str(clisign).encode('utf-8'))
         print(f"Handshake info --> client says {self.client.recv(4096).decode('utf-8')}")
         self.client.send(str(clie).encode('utf-8'))
         print(f"Handshake info --> client says {self.client.recv(4096).decode('utf-8')}")
+
         self.client.send("breaker".encode('utf-8'))#formatting
+
+        # Use the DH values sent from atm previously to calculate the keys
         cliplain = clirand.split('-')
         self.aeskey = pow(int(cliplain[0]), dhprivateaes, self.p) % pow(2,256)
         self.mackey = pow(int(cliplain[1]), dhprivatemac, self.p) % pow(2,256)
@@ -239,17 +256,25 @@ class Bank:
         self.mackey = format(self.mackey, '064x')
         print("Handshake info --> bank calculated aes/mac keys from DH exchange")
         print(f"Handshake info --> Bank ready to go, atm replied {aes.decrypt(self.client.recv(1024).decode('utf-8'),self.aeskey)}")
+
+        # Tell client we have the keys
         self.client.send((aes.encrypt("finished", self.aeskey)).encode('utf-8'))
 
         # Challenge client to see if they're an ATM
         client_keyname = aes.decrypt(self.client.recv(1024).decode('utf-8'), self.aeskey)
         challenge = format(secrets.randbits(20*8), '040x')
-        if scheme == 'rsa':
-            client_pubkey = rsa.load_public_key(f"local_storage/{client_keyname}-rsa.pub")
-            challenge_encrypted = rsa.encrypt(challenge, client_pubkey)
-        else:
-            client_pubkey = elgamal.load_public_key(f"local_storage/{client_keyname}-elgamal.pub")
-            challenge_encrypted = elgamal.encrypt(challenge, client_pubkey)
+
+        try:
+            if scheme == 'rsa':
+                client_pubkey = rsa.load_public_key(f"local_storage/{client_keyname}-rsa.pub")
+                challenge_encrypted = rsa.encrypt(challenge, client_pubkey)
+            else:
+                client_pubkey = elgamal.load_public_key(f"local_storage/{client_keyname}-elgamal.pub")
+                challenge_encrypted = elgamal.encrypt(challenge, client_pubkey)
+        except:
+            self.client.close()
+            raise Exception('client identifier is invalid')
+
         self.client.send(aes.encrypt(str(challenge_encrypted), self.aeskey).encode('utf-8')) 
 
         client_response = aes.decrypt(self.client.recv(1024).decode('utf-8'), self.aeskey)
