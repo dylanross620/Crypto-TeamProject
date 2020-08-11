@@ -1,5 +1,6 @@
 \section{Bank/ATM Communication}\label{sec:batmcoms}
-Made by all three members. Writeup by Ryan Prashad\\
+Made by all three members\\
+Writeup by Ryan Prashad\\
 
 	\medskip
 	The whole scheme of Bank/ATM communication relies on AES symmetric encryption and HMAC after public key encryption is used to  establish the symmetric keys for use by way of Diffie-Hellman. This allows us to send arbitrary length messages after the handshake between the ATM and Bank without the need to refer to a modulus n-bits and cap the messsage size at that (as would be the case with asymmetric encryption).
