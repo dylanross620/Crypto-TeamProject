@@ -7,3 +7,6 @@ these files as part of an attack). These files are ones that would realistically
 be visible over the network. We also made the assumption that all atms have the bank's public key locally, which is very similar to real systems such as the secure
 boot chain on the Nintendo Switch console. Finally, we assumed that the bank has a repository of all atm public keys, which is how ssh services often do user
 authentication.
+
+Our project only handles one atm per time running the bank program. As such, the bank will need to be restarted between atm instances. For use in a real-world situation,
+our code could easily be multithreaded where our current project is a thread that is spawned for each attempted connection made to the bank.
