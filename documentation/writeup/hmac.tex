@@ -1,0 +1,21 @@
+\section{HMAC}\label{sec:hmac}
+Done by Dylan Ross\\
+
+	\medskip
+	HMAC is a standard for using a cryptographic hash function (such as SHA-1 as defined in section \ref{sec:sha}) in order to create a keyed message authentication code. The standard treats the
+	chosen hash function as an oracle, and as such is very simple and easy to implement. We implemented the HMAC algorithm according to \href{https://tools.ietf.org/html/rfc2104}{RFC 2104}.
+
+	\subsection{MAC Generation}\label{sec:hmac-generation}
+		We will define $H(m)$ as a cryptographic hash function to be used by HMAC, and $B$ to be the block length of $H(m)$ in bytes.\\
+
+		Firstly, the HMAC key must be $B$ bytes long, so some key manipulation is likely needed. If the key $K$ is longer than $B$ bytes long, then replace $K$ with $H(K)$. Next, if $K$ is less
+		than $B$ bytes long, then $K$ is padded by appending null bytes (0x00) until $K$ has exactly $B$ bytes.
+
+		We will define $ipad$ as the byte 0x36 repeated $B$ times, and $opad$ as the byte 0x5c repeated $B$ times. Using the symbol $\oplus$ to represent the XOR operation and $+$ as string
+		concatenation, the HMAC of message $m$ is computed as $HMAC=H(K\oplus opad + H(K\oplus ipad + m))$.
+
+	\subsection{Implementation}\label{sec:hmac-implementation}
+		The implementation of HMAC is very simple, given an already working hash function. As such, we used the SHA-1 algorithm discussed in section \ref{sec:sha} as our hash function for
+		generating HMACs. The HMAC algorithm can be made more efficient by utilizing a map data structure. Because $opad$ and $ipad$ are XORed with the key and used for nothing else, each
+		key can have the values $K\oplus ipad$ and $K\oplus opad$ calculated the first time the key is used and retrieved by future uses of the same key. This way, a relatively large calculation
+		can be skipped many times during long communications that involve many packets being sent, each with its own MAC.

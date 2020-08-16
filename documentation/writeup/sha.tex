@@ -1,0 +1,46 @@
+\section{SHA-1}\label{sec:sha}
+Done by Dylan Ross\\
+
+	\medskip
+	SHA-1 is a cryptographic hashing function that was first published in 1995. It works by padding messages to specific lengths and doing various
+	computations on pieces of the message at a time to create a fixed-length unique output for each input, regardless of the input size. We implemented the SHA-1 algorithm according to 
+	\href{https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf}{FIPS 180}.
+
+	\subsection{SHA-1 Functions}\label{sec:sha-functions}
+		Each version of SHA has its own function definitions. In all cases, the function takes 3 words as inputs, and returns a different result depending on which iteration of the function
+		is being called which is referred to as $t$. Using the symbol $\oplus$ for the XOR operation, $\land$ for the bitwise and operation, and $\neg$ for the bitwise negation operation, 
+		$f_t(x,y,z)$ where each of $x,y,z$ is a 32-bit word, SHA-1 defines its functions as follows:
+		\begin{center}
+			$f_t(x,y,z) = \begin{cases}
+				(x\land y) \oplus (\neg x\land z) & 0\le t\le19\\
+				x\oplus y\oplus z & (20\le t\le39) \lor (60\le t\le79)\\
+				(x\land y) \oplus (x\land z) \oplus (y\land z) & 40\le t\le59
+				\end{cases}	 
+			$
+		\end{center}   
+
+	\subsection{SHA-1 Constants}\label{sec:sha-constants}
+		In addition to defining their own functions, each version of SHA also defines its own constants. SHA-1 defines eighty words as constants that it treats as an array called $K_t$. Similarly
+		to the SHA-1 functions, the values of $K_t$ are one of four possible values, where each value appears twenty consecutive times.
+
+	\subsection{Padding}\label{sec:sha-padding}
+		In order to work on inputs of any length (to a point), SHA-1 pads messages until their bitlength is a multiple of 512. This is important as the SHA-1 algorithm works by processing the
+		message in blocks of 512 bits at a time, so the entire message must have a whole number of blocks. This is done by first appending a 1 bit to the message, followed by the minimum number
+		of 0 bits such that the new bitlength $b\equiv448\text{ mod }512$. To finish the padding, 64 bits are appended to the end, where the 64 bits are the binary representation of the
+		original message size.
+
+	\subsection{Calculating the Hash}\label{sec:sha-hash}
+		To compute a message's hash, first pad the message using the padding algorithm described in section \ref{sec:sha-padding}. Additionally, 5 initial hash values must be defined, which are given
+		in \href{https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf}{FIPS 180}. At this point, the message is split into 512-bit blocks and each block is worked on seperately.\\
+
+		For each block, a message schedule is created by either copying a word from the original message or manipulating previous parts of the message schedule, depending on which part of the
+		schedule is being calculated. From there, the current hash values are modified through a combination of addition, the functions defined in section \ref{sec:sha-functions}, and circular
+		left shifts. Within the SHA-1 algorithm, all addition is done mod $2^{32}$ to maintain each part fitting within a word.\\
+
+		After the final block has been hashed, the message's resultant hash is computed by concatenating the 5 resultant hash values that have been modified by every block.
+
+	\subsection{Implementation}\label{sec:sha-implementation}
+		When it came to implementing the SHA-1 algorithm, the process was fairly straightforward. The entire process was a matter of implementing three small functions, having
+		logic to determine which one to execute, and initializing constants. The padding algorithm was also easy to implement as it involved simple modular arithmetic to calculate padding size.
+		However, an \href{https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA1.pdf}{example hash calculation} provided by NIST was very
+		helpful in ensuring that my algorithm was working as intended at every step.

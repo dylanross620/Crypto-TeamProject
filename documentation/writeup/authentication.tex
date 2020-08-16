@@ -1,0 +1,20 @@
+\section{ATM Authentication}\label{sec:authentication}
+Done by Dylan Ross\\
+
+	\medskip
+	Another vulnerability that we found in our assigned project is that the bank never authenticates that the client is an actual ATM once a connection is established. As such, there is nothing
+	to distinguish an attacker connecting to the bank from their laptop from an ATM that can ensure that various rules are being followed. For example, we assumed that the ATM would realistically
+	check that the user actually inserted money before sending a message to the bank saying to deposit money into their account. However, an attacker being able to connect using a different device
+	can send arbitrary deposit messages to the bank in order to add money into their account and withdraw it from an actual ATM.\\
+
+	This attack, when combined with the lack of passwords mentioned in section \ref{sec:passwords}, could also allow an attacker to bypass any local credential checking done by the ATM in order
+	to send withdraw messages with a different account number, which would empty the target account's balance without the money going to anyone else. However, even if passwords were implemented on
+	the bank side to prevent such an attack, an attacker would still be able to arbitrarily deposit money into their own account as they would know their own credentials and be able to send them
+	to the bank.\\
+
+	We were able to generate a working proof of concept for this attack by creating a copy of the atm.c file and modifying it slightly for ease of use and to remove parts that were unneccesary for
+	the attack. After compiling this new file with the same flags used for atm.c (done by copying from the make file), we could send arbitrary deposit messages and received the correct responses
+	from the bank. However, this attack could not be shown very well using the current implementation of the bank because the bank does not store account balances at any point. Instead, it
+	initializes every account to a pre-determined balance at runtime. As such, our proof of concept cannot be shown to work between sessions on this implementation, but neither do any legitimate
+	transactions done by the ATM itself. Due to the theory behind the attack and the proper response codes received by the proof of concept, there is no reason to believe this attack would not
+	work on an actual bank implementation that saves user balances.

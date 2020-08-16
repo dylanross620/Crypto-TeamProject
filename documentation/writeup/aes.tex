@@ -1,0 +1,85 @@
+\section{AES Encryption Scheme}\label{sec:aes}
+Done by Dylan Ross\\
+
+	\medskip
+	We implemented AES according to \href{https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf}{FIPS 197}. AES is a private key cryptosystem that was designed to replace the previously
+	standard DES encryption algorithm. AES works by splitting the message into blocks of 16 bytes and encrypting each block seperately.
+
+	\subsection{Mathematical Definitions}\label{sec:aes-math}
+		AES treats each byte as a polynomial with its bits as the coefficients. This polynomial representation results in the byte 0x55, with binary representation 0101 0101 being treated as 
+		the polynomial $x^6+x^4+x^2+x^0$.
+
+		\subsubsection{Addition}\label{sec:aes-add}
+			Within AES, adding bytes is done by adding their representative polynomials mod 2. On a bit level, this is the equivalent of the bitwise XOR operation, which will be represented by
+			the symbol $\oplus$. Additionally, this means that addition and subtraction are the same, as XOR is its own inverse.
+
+		\subsubsection{Multiplication}\label{sec:aes-mult}
+			Within AES, multiplication is done in GF($2^8$) and reduced mod an irreducible polynomial $m$, which is defined as $m(x)=x^8+x^4+x^3+x+1$. This multiplication is represented by the
+			$\bullet$ symbol.\\
+
+			This multiplication can be drastically simplified using bitwise operations. Firstly, the byte 0x01 is the identity byte, so $x\bullet0x01=x$ for all bytes $x$. In order to multiply
+			a byte $b$ by 0x02, first you must take note of the most significant bit of $b$. To calculate the result, you then shift $b$ left by 1 bit, then XORing it with 0x1b if the most
+			significant bit was a 1 (you only do the shift if the bit was a 0). As such, the result when multiplying is $b<<1$ if the most significant bit is 0, else $(b<<1)\oplus\text{0x1b}$.
+			Applying this formula multiple times allows multiplying by any power of 2, which can be combined with the commutative property of multiplication to multiply any 2 arbitrary bytes
+			together.
+
+	\subsection{Algorithm Parameters}\label{sec:aes-param}
+		The FIPS 197 publication specifies three versions of AES: AES-128, AES-192, and AES-256. These versions only differ in a few parameters while the algorithm itself stays the same
+		between them. In our project, we chose to implement AES-256. As such, our implementation uses keys that are 8 words long, blocks that are 4 words long, and has 14 rounds of encryption.
+
+	\subsection{The Algorithm}\label{sec:aes-alg}
+		The AES algorithm first splits the 16 byte (4 word) block into a 4x4 matrix that is referred to as the state array. The encryption is done by performing a variety of transformations on
+		this matrix, which are defined below.
+
+		\subsubsection{SubBytes Transformation}\label{sec:aes-subbytes}
+			The SubBytes transformation uses a substitution box to change every byte in the state array. The substitution box is a pre-defined 16x16 matrix of bytes. Each byte in the state array
+			is split into its upper 4 bits and its lower 4 bits, and is replaced by the byte in the row defined by the upper 4 bits and the column defined by the lower 4 bits. Unlike in DES,
+			only one S-box is used and each byte is used by it individually.
+
+		\subsubsection{ShiftRows Transformation}\label{sec:aes-shiftrows}
+			The ShiftRows transformation performs a circular left shift on each of the rows, which each row being shifted a variable amount. The rows are indexed from $r_0$ to $r_3$ with $r_0$
+			being the topmost row and $r_3$ being the bottommost row. Each row is shifted by it's index, so $r_0$ remains stationary while $r_2$ is shifted by 2 places.
+
+		\subsubsection{MixColumns Transformation}\label{sec:aes-mixcols}
+			The MixColumns transformation works on individual columns at a time, treating them as a four-term polynomial and multiplying them by a fixed polynomial 
+			$a(x)=\text{03}x^3+\text{01}x^2+\text{01}x+\text{02}$, with the multiplication happening mod $x^4+1$. If we label the bytes in the column as $b_0,b_1,b_2,b_3$ where $b_0$ is in
+			the topmost row and $b_3$ is in the bottommost row, we can represent the multiplication by the following equations, using the mathematical definitions from section \ref{sec:aes-math}:
+			\begin{align*}
+				b_0 &= (\text{0x02}\bullet b_0) \oplus (\text{0x03}\bullet b_1) \oplus b_2 \oplus b_3\\
+				b_1 &= b_0 \oplus (\text{0x02}\bullet b_1) \oplus (\text{0x03}\bullet b_2) \oplus b_3\\
+				b_2 &= b_0 \oplus b_1 \oplus (\text{0x02}\bullet b_2) \oplus (\text{0x03}\bullet b_3)\\
+				b_3 &= (\text{0x03}\bullet b_0) \oplus b_1 \oplus b_2 \oplus (\text{0x02}\bullet b_3)
+			\end{align*}   
+
+		\subsubsection{AddRoundKey Transformation}\label{sec:aes-addround}
+			The AES key is expanded into various round keys, as is defined in section \ref{sec:aes-keys}. Each of these round keys is 16 bytes, which is made of 4 different 4 4-byte chunks.
+			Each of these chunks is labelled $w_0$ to $w_3$, with $w_0$ being the leftmost and $w_3$ being the rightmost. In this transformation, each of these chunks is XORed with its corresponding
+			column in the state array to create the transformed state.
+			
+		\subsubsection{Key Expansion}\label{sec:aes-keys}
+			AES-256 takes as input a 256 bit key. This key is then expanded into a number of words equal to $4(N_r+1)$ where $N_r$ is the number of rounds. For AES-256, $N_r=14$, so the key is
+			expanded from 256 bits to 60 words, or 1920 bits. This is done through a combination of utilizing the S-box defined in section \ref{sec:aes-subbytes}, circularly left-shifting bytes
+			similarly to section \ref{sec:aes-shiftrows}, and utilizing a round constant $rcon$ defined by $rcon[i]=\{x^{i-1}, \text{0x00}, \text{0x00}, \text{0x00}\}$. The full algorithm is
+			shown in \href{https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf}{FIPS 197}.
+
+	\subsection{Encryption}\label{sec:aes-encryption}
+		To begin the encryption process, the message is split into 16-byte blocks to be encrypted seperately. We chose to implement a CBC version of AES, so the plaintext of each block is XORed with
+		the ciphertext of the previous block before encrypting.\\
+
+		When encrypting a block, it is first transformed into its corresponding state array and an initial AddRoundKey is performed. From there, 14 rounds take place, where each round consists of
+		a SubBytes, a ShiftRows, a MixColumns, and an AddRounKey in that order. The only exception is the final round, where the MixColumns transorm is skipped. At this point, the resultant state
+		array can be unpacked and returned as the ciphertext.
+
+	\subsection{Decryption}\label{sec:aes-decryption}
+		Each of the transformations used in encryption can be easily inverted. For SubBytes, an inverse S-box exists that, when used the same way, results in the exact inverse of the original. For
+		ShiftRows, each row is circularly shifted to the right by the same amount it was during encryption. AddRoundKey consists of only XOR operations, and as such is its own inverse. The
+		MixColumns transformation can be inverted in the same method that it was performed, but using a different set of computations. The round keys can be generated in the same way as they are
+		for encryption and then simply used in reverse order.\\
+
+		When decrypting a block, it is first transformed into its corresponding state array and an initial AddRoundKey is performed. From there, each of the 14 rounds consist of inverting ShiftRows,
+		inverting SubBytes, an AddRoundKey, and inverting MixColumns. The only exception once again is the last round, where inverting MixColumns is skipped.
+
+	\subsection{Implementation}\label{sec:aes-implementation}
+		Unlike the public key systems previously mentioned, AES does not really have pitfalls to avoid during implementation because all variables are pre-defined. Additionally, 
+		\href{https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf}{FIPS 197} provides a step by step example of key scheduling in Appendix A and a full encryption example in Appendix C. Both
+		of these were extremely helpful for ensuring that my implementation worked properly.

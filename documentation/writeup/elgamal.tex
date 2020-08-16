@@ -1,0 +1,59 @@
+\section{ElGamal Encryption Scheme}\label{sec:elgamal}
+Done by Dylan Ross\\
+
+	\medskip
+	In addition to RSA, our project also supports the ElGamal encryption scheme for initializing the connection between the atm and the bank. This scheme has been around since the 1980s, when it was
+	invented by Taher Elgamal. The scheme takes advantage of the difficulty of the discrete logarithm problem in order to create a secure encryption algorithm with a trapdoor.
+
+	\subsection{Background Math}\label{sec:elgamal-background}
+		This encryption scheme relies on the discrete logarithm problem. This problem revolves around the fact that, given a modulus $n$, a generator for $\mathbb{Z}_n^*$ called $g$, and a number
+		$b$ such that $b\equiv g^a\text{ mod }n$ for some $a$, it is difficult to solve for $a$.
+
+	\subsection{Key Generation}\label{sec:elgamel-keys}
+		ElGamal keys consist of both a public and a private key. The public key contains enough information to encrypt a message such that only the receiver can decrypt it due to the discrete
+		logarithm problem, while the private key contains the necessary information to avoid needing to solve a hard problem. The contents of the public key are the integers $p$, $\alpha$, and
+		$\beta$ while the private key consists of the integer $a$. While the only private information is $a$, it is easier in practice to store the private key as both $p$ and $a$ as $p$ will
+		also be necessary during decryption.\\
+
+		To create the keys, select a large prime $p$ and an integer $\alpha$ such that $\alpha$ is a generator for $\mathbb{Z}_p^*$. Next, select a random integer $a$ such that $1\le a\le p-2$.
+		Finally, calculate $\beta=\alpha^a\text{ mod }p$. The public key consists of the tuple ($p$, $\alpha$, $\beta$), while the private key consists is $a$.\\
+
+		Selecting a generator is not a simple task. We did so by selecting the smallest integer $g$ in $\mathbb{Z}_p$ such that the minimum $a$ that satisfies the equation $g^a\equiv1\text{ mod }p$
+		is $a=p-1$ and $1<g<p-1$. By Fermat's little theorem (see section \ref{sec:rsa-fermat}), we know that $a=p-1$ will be a solution for all $g<p$. In order to test for the minimality of
+		the solution, we can take the factorization of $p-1$, say $f_{1..n}$, and see if $g^b\text{ mod }p$ is 1 for all $b=\frac{p-1}{f_i}$. We know that $g$ is a generator if and only if
+		none of the values of $b$ are result in the equation being true.
+
+	\subsection{Encryption}\label{sec:elgamal-encryption}
+		ElGamal encryption works by converting the desired message into a number and doing computations on it using the intended recipient's public key. As such, anyone can encrypt and send a
+		message to a desired recipient, but only the intended receiver of the message has the required information to decrypt and read the message.\\
+
+		Recall that an ElGamal public key consists of the numbers $p$, $\alpha$, and $\beta$. We will call the message to be encrypted $m$, and will assume it has already been converted to a number
+		such that $m<p$. First, the sender must generate a random integer $k$ such that $0\le k<p-1$. Then, the sender can calculate the numbers $y_1\equiv\alpha^k\text{ mod }p$ and 
+		$y_2\equiv m\beta^k\text{ mod }p$. The ciphertext is the tuple ($y_1$, $y_2$), and can now be sent to the receiver.\\
+
+		This ciphertext is secure because, in order to recover $m$, one must calculate $(\beta^k)^{-1}\text{ mod }p$. While an attacker would know the values of $\beta$ and $p$, the only way
+		that they could solve for $k$ would be to solve the equation $\alpha^k\equiv y_1\text{ mod }p$, which is difficult by the discrete logarithm problem.
+
+	\subsection{Decryption}\label{sec:elgamal-decryption}
+		ElGamal decryption works by using the private key and the ciphertext to calculate $(\beta^k)^{-1}$ without needing to solve the discrete logarithm problem.\\
+
+		Recall that the ciphertext consists of the two integers $y_1$ and $y_2$, and the private key consists of $a$ (and the number $p$ from the public key is required as well). In order to recover
+		the message $m$ from the ciphertext, the receiver can compute $m\equiv y_2(y_1^a)^{-1}\text{ mod }p$.\\
+
+		To understand why this works, recall the construction of the public key and the ciphertext. The above formula for recovering the message is the equivalent to $m\beta^k*((\alpha^k)^a)^{-1}
+		\text{ mod }p$. Because $\beta\equiv\alpha^a\text{ mod }p$, this is the same as $m(\alpha^a)^k*((\alpha^k)^a)^{-1}=m\alpha^{ak}*(\alpha^{ak})^{-1}\equiv m\text{ mod }p$.
+
+	\subsection{Message Signatures}\label{sec:elgamal-sign}
+		Like RSA, ElGamal can also be used to generate signatures for a message. Given the private key $a$, prime modulus $p$, and generator $\alpha$, a signature for message $m$ can be constructed
+		as follows. First, we will define $H(m)$ to be the hash of $m$ using some cryptographic hash function. First, the signer generates a random integer $k$ such that $1<k<p-1$ and
+		$k$ is coprime to $p-1$. They can then use $k$ to compute $r\equiv g^k\text{ mod }p$ and $s=(H(m)-xr)k^{-1}\text{ mod }p$. The signature consists of the tuple ($r$, $s$).\\
+
+		In order to verify this signature for message $m$, a verifier can use the signer's $\text{public key}=(p, \alpha, \beta)$ to test if $g^{H(m)}\equiv y^rr^s\text{ mod }p$. If this condition
+		holds, the the signature is valid.
+
+	\subsection{Security Measures in Implementation}\label{sec:elgamal-security}
+		While ElGamal does not have as many well-documented potential pitfalls to fall into during implementation as RSA does, it still has some points to be careful of. Notably, the security of the
+		scheme relies on the discrete logarithm problem, but this problem can be solved efficiently if $p-1$ only has small factors. In order to prevent this from happening, we generated $p$ of a
+		desired bitlength $n$ by generating a random prime $q$ of bitlength $n-1$ until $p=2q+1$ was prime. However, this led to a large time for key generation due to the linear time complexity
+		of generating prime numbers, compounded over trying to generate a prime that can generate a second prime. This leads to the second pitfall of attempting to save time by reducing the
+		size of $p$. While this is very effective for generating faster keys, it reduces the security of the encryption. As such, we did not use any keys where $p$ had less than 1024 bits.

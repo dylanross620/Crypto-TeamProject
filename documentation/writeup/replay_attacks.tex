@@ -1,0 +1,30 @@
+\section{Replay Attacks}\label{sec:replayattacks}
+Written by Leith Reardon\\
+
+	\medskip
+	Replay attacks are a form of man-in-the-middle attack that involves an adversary intercepting the communications of two parties unbeknownst to them and sending old messages in order to trick one party into believing the adversary is the other party. 
+	
+	\subsection{Potential Risks}\label{sec:replayrisks}
+		Replay attacks can be dangerous for a number of reasons. If an adversary has a log of communications between two parties from an earlier date, they could use this log to gain one of the parties' trust and potentially verify themselves to the party. For example, if Alice wants to prove her identity to Bob, and she does so by sending him her password with some transform on it, an adversary Eve could use this message during a later session to trick Bob into verifying her as Alice. \\
+
+		In addition, if the adversary has access to older messages after the verifcation is complete, they could repeat these messages to get one party to possibly repeat required actions. This would be especially harmful in a banking system, similar to the system we are implementing here. If an adversary gets verified by the bank, they could replay a message withdrawing money from the account. 
+	
+	\subsection{Countermeasures}\label{sec:replaycountermeasures}
+		There are several different countermeasures that can be taken against replay attacks that prevent old messages from being accepted by either party. Usually this is done by sending some extra information with each communication that can be used to distinguish it from past and future communications. 
+		
+		\subsubsection{Timestamps}\label{sec:replaytimestamps}
+			One method against replay attacks is to attach a timestamp to each message before encrypting and sending it. This could be done either by each party sending timestamps with every message and only accepting timestamps within a certain interval. Any messages not sent within this interval are discarded by the recipient. Another method is that one party periodically sends out their timestamp and the other party sends messages back with an estimate on the current time of the first party's clock. They must be within a certain threshold in order for their messages to be accepted.\\
+
+			An issue with timestamps is that there is a certain small amount of time when an adversary could perform a replay attack and have it be accepted by one of the parties. The threshold would have to be fairly small in order to prevent adversaries from abusing it, which means communication between the two parties must also be fairly fast and consistent.
+
+		\subsubsection{Session IDs}\label{sec:replaysessions}
+			Session IDs can be used to make each series of communications between two parties secure from replay attacks. By having a unique session ID, each communication during the session will be unique compared to other sessions and messages with an old session ID can be discarded. \\
+
+			It is important that the session IDs be random, because if an adversary could predict a future session ID, they could manipulate a party into sending it through their transform during an earlier session and then could use it later to authenticate themselves with the alternate party on a future session. This method makes individual sessions difficult to perform replay attacks on but could lead to some potential vulnerabilities during sessions.
+
+		\subsubsection{Our Implementation}\label{sec:replayimplementation}
+			Our implementation uses a combination of a session ID along with a counter method to prevent messages being replayed during a session. The counter starts once the user is prompted to log in by the ATM. A random session ID is generated and sent to the bank who verifies the message and increments the session ID by one before sending it back. This session ID is the initial value for the counter. If the counter variable received by the other party does not match what the counter should be on that message, then the recipient knows the message has been tampered with and can discard it.\\
+
+			This counter variable prevents messages from within a session from being replayed. Additionally, due to the randomly generated encryption keys for each session, messages between sessions cannot be replayed either as they would not decrypt properly with the new key. 
+
+\end{document}

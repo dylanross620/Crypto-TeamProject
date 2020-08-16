@@ -1,0 +1,31 @@
+\documentclass{article}
+
+\usepackage[total={7.5in,9in}]{geometry}
+\usepackage{enumerate}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{multicol}
+
+\title{Cryptography and Network Security Final Project - Blackhat}
+\date{August 18, 2020}
+\author{Ryan Prashas\and Leith Reardon\and Dylan Ross}
+
+\begin{document}
+
+	\maketitle
+
+	\tableofcontents
+
+	\section*{Introduction}
+		The project that we were given is written in C, and uses various libraries in order to implement a large number of options for both symmetric and public key cypto systems in order
+		to implement a pseudo-ssh algorithm in order to create a secure connection between a bank and an atm. Below are our attacks on the implementation.
+
+	\input{passwords.tex}
+
+	\input{authentication.tex}
+
+\end{document}
