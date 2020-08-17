@@ -1,0 +1,9 @@
+\contentsline {section}{\numberline {1}Password Management}{1}{section.1}%
+\contentsline {section}{\numberline {2}ATM Authentication}{1}{section.2}%
+\contentsline {section}{\numberline {3}Connection Sequence Weaknesses}{2}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Connection Struct}{2}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Sequence Vunerabilities}{2}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Using the Vunerability}{2}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Code to take advantage}{3}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Limitations}{3}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Secrets}{3}{section.4}%
