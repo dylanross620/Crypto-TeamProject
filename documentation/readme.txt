@@ -1,3 +1,6 @@
+Made by Ryan Prashad, Leith Reardon, and Dylan Ross.
+This project requires Python 3.8+ in order to run.
+
 In order to run this project, first run 'bank.py' to initialize the server, then run 'atm.py' while the bank is still running.
 
 The bank currently has 3 users. For the blackhat team, we created the user "Hacker" with the password "crypto".
